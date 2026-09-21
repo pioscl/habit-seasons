@@ -1,5 +1,5 @@
 const CACHE_PREFIX=`habit-seasons:${self.registration.scope}:`;
-const CACHE=`${CACHE_PREFIX}v9`;
+const CACHE=`${CACHE_PREFIX}v10`;
 const ASSETS=['./','./index.html','./style.css','./app.js','./model.js','./habit-icons.js','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));

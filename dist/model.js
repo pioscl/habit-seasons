@@ -25,6 +25,10 @@ export function weekProgress(s,c,date=today()){
 export function canCheckIn(s,c,date=today()){
  return c.status==='active'&&scheduled(c,date)&&(c.frequency.type!=='weekly'||weekProgress(s,c,date).done<weeklyTarget(c,date));
 }
+export function canBackfill(s,c,date){
+ const now=today();
+ return !!c&&dateValid(date)&&date>=weekStart(now)&&date<now&&canCheckIn(s,c,date)&&!s.checkins.some(x=>x.cycleId===c.id&&x.date===date);
+}
 export function expected(c,until=c.endDate){
  const end=until<c.endDate?until:c.endDate;if(end<c.startDate)return 0;
  let n=0;
@@ -65,7 +69,21 @@ export function validate(s){
  ensure(s.lastExportAt===null||(typeof s.lastExportAt==='string'&&Number.isFinite(Date.parse(s.lastExportAt))),'备份时间无效。');return s;
 }
 export function startCycle(s,templateId,startDate,endDate,frequency={type:'daily'}){const t=s.templates.find(x=>x.id===templateId);ensure(t&&!t.archived,'模板不存在或已停用。');ensure(!s.cycles.some(c=>c.templateId===templateId&&c.status==='active'),'这个习惯已有进行中的一期。');ensure(dateValid(startDate)&&dateValid(endDate)&&startDate>=today()&&endDate>=startDate&&daysBetween(endDate,startDate)<=3660,'请选择有效的开始和结束日期（最长 10 年）。');ensure(frequencyValid(frequency),'请选择有效的执行频率。');const c={id:uid(),templateId,frequency:structuredClone(frequency),snapshot:{name:t.name,icon:t.icon,difficulty:t.difficulty,points:t.points},startDate,endDate,status:'active',endedAt:null};ensure(expected(c)>0,'这段时间没有安排执行日，请延长周期。');s.cycles.push(c);return c}
-export function checkIn(s,cycleId,date=today()){const c=s.cycles.find(c=>c.id===cycleId);ensure(c&&c.status==='active'&&date===today()&&scheduled(c,date),'今天不是这一期的执行日。');ensure(!s.checkins.some(x=>x.cycleId===cycleId&&x.date===date),'今天已经完成过了。');ensure(canCheckIn(s,c,date),'本周目标已完成，下周再继续。');s.checkins.push({id:uid(),cycleId,date,points:c.snapshot.points});return c.snapshot.points}
+function recordCheckIn(s,cycleId,date){
+ const c=s.cycles.find(c=>c.id===cycleId);
+ ensure(c?.status==='active'&&dateValid(date)&&scheduled(c,date),'这一天不是进行中周期的执行日。');
+ ensure(!s.checkins.some(x=>x.cycleId===cycleId&&x.date===date),'这一天已经完成过了。');
+ ensure(canCheckIn(s,c,date),'本周目标已完成，下周再继续。');
+ s.checkins.push({id:uid(),cycleId,date,points:c.snapshot.points});return c.snapshot.points;
+}
+export function checkIn(s,cycleId,date=today()){
+ ensure(date===today(),'过去的日期请使用本周补打卡。');return recordCheckIn(s,cycleId,date);
+}
+export function backfillCheckIn(s,cycleId,date){
+ const now=today();
+ ensure(dateValid(date)&&date>=weekStart(now)&&date<now,'只能补本周一至昨天的打卡。');
+ return recordCheckIn(s,cycleId,date);
+}
 export function undoCheckIn(s,cycleId){const c=s.cycles.find(c=>c.id===cycleId),i=s.checkins.findIndex(x=>x.cycleId===cycleId&&x.date===today());ensure(c?.status==='active'&&i>=0,'只能撤销进行中周期的今日打卡。');ensure(balance(s)>=s.checkins[i].points,'这次积分已用于兑换，当前余额不足以撤销。');s.checkins.splice(i,1)}
 export function finishCycle(s,id,status){const c=s.cycles.find(c=>c.id===id);ensure(c?.status==='active','这一期已经结束。');ensure(c.startDate<=today(),'这一期尚未开始。');ensure(['completed','ended'].includes(status),'结束状态无效。');ensure(status!=='completed'||today()>=c.endDate,'到达结束日期后才可完成归档；现在可以提前结束。');if(status==='ended'&&!s.checkins.some(x=>x.cycleId===id)){s.cycles=s.cycles.filter(x=>x.id!==id);return 'deleted'}c.status=status;c.endedAt=today();return status}
 export function redeem(s,id){const r=s.rewards.find(r=>r.id===id);ensure(r&&!r.archived,'奖励不存在或已停用。');ensure(balance(s)>=r.cost,'积分还不够，再积累一点。');const record={id:uid(),rewardId:id,name:r.name,cost:r.cost,redeemedAt:new Date().toISOString()};s.redemptions.push(record);return record}

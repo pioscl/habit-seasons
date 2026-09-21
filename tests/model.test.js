@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {HABIT_ICONS,upgrade,weekStart,weekProgress,weeklyTarget,canCheckIn,initialState,today,shiftDate,monthEnd,daysBetween,expected,balance,validate,startCycle,checkIn,undoCheckIn,finishCycle,redeem} from '../dist/model.js';
+import {backfillCheckIn,canBackfill,parseDate,HABIT_ICONS,upgrade,weekStart,weekProgress,weeklyTarget,canCheckIn,initialState,today,shiftDate,monthEnd,daysBetween,expected,balance,validate,startCycle,checkIn,undoCheckIn,finishCycle,redeem} from '../dist/model.js';
 function setup(){const s=initialState();const c=startCycle(s,s.templates[0].id,today(),shiftDate(today(),6));return{s,c}}
 test('full lifecycle: snapshot, points, reward, archive and restart',()=>{const{s,c}=setup();s.templates[0].points=30;s.templates[0].name='新版';assert.equal(c.snapshot.points,10);assert.equal(c.snapshot.name,'轻断食');checkIn(s,c.id);s.rewards[0].cost=5;const r=redeem(s,s.rewards[0].id);s.rewards[0].cost=500;s.rewards[0].name='新版奖励';assert.equal(r.cost,5);assert.equal(r.name,'买一本书');assert.equal(balance(s),5);finishCycle(s,c.id,'ended');const next=startCycle(s,s.templates[0].id,today(),shiftDate(today(),3));assert.equal(next.snapshot.points,30);assert.equal(s.checkins.length,1);assert.equal(s.cycles.length,2);validate(s)});
 test('duplicate check-ins and concurrent active cycles cannot mint points',()=>{const{s,c}=setup();checkIn(s,c.id);assert.throws(()=>checkIn(s,c.id));assert.throws(()=>startCycle(s,c.templateId,today(),today()));assert.equal(balance(s),10);assert.equal(s.checkins.length,1)});
@@ -83,4 +83,63 @@ test('explicit completion still archives a zero-check-in cycle at its end date',
  const s=initialState(),c=startCycle(s,s.templates[0].id,today(),today());
  assert.equal(finishCycle(s,c.id,'completed'),'completed');assert.equal(s.cycles.length,1);
  assert.equal(c.status,'completed');validate(s);
+});
+
+
+function backfillSetup(t,frequency={type:'daily'},start='2026-09-21',end='2026-10-04'){
+ t.mock.timers.enable({apis:['Date'],now:parseDate(start)});
+ const s=initialState(),c=startCycle(s,s.templates[0].id,start,end,frequency);
+ t.mock.timers.setTime(+parseDate('2026-09-27'));
+ return {s,c};
+}
+test('Sunday backfill accepts Monday and Saturday, credits snapshot points and survives backup',t=>{
+ const {s,c}=backfillSetup(t);s.templates[0].points=50;
+ for(const date of ['2026-09-21','2026-09-26']){
+  assert.equal(canBackfill(s,c,date),true);assert.equal(backfillCheckIn(s,c.id,date),10);
+  assert.equal(canBackfill(s,c,date),false);assert.throws(()=>backfillCheckIn(s,c.id,date));
+ }
+ assert.equal(balance(s),20);assert.deepEqual(s.checkins.map(x=>x.date),['2026-09-21','2026-09-26']);
+ assert.deepEqual(upgrade(JSON.parse(JSON.stringify(s))),s);
+});
+test('backfill rejects previous weeks, today, future dates and invalid dates without mutations',t=>{
+ const {s,c}=backfillSetup(t,{type:'daily'},'2026-09-14');const before=structuredClone(s);
+ for(const date of ['2026-09-20','2026-09-27','2026-09-28','2026-09-31','invalid',null]){
+  assert.equal(canBackfill(s,c,date),false);assert.throws(()=>backfillCheckIn(s,c.id,date));
+ }
+ assert.deepEqual(s,before);checkIn(s,c.id);assert.equal(balance(s),10);
+});
+test('backfill respects cycle dates and weekday schedules',t=>{
+ const {s,c}=backfillSetup(t,{type:'weekdays',days:[3,5]},'2026-09-23','2026-09-25');
+ for(const date of ['2026-09-21','2026-09-24','2026-09-26']){
+  assert.equal(canBackfill(s,c,date),false);assert.throws(()=>backfillCheckIn(s,c.id,date));
+ }
+ backfillCheckIn(s,c.id,'2026-09-23');backfillCheckIn(s,c.id,'2026-09-25');
+ assert.equal(s.checkins.length,2);validate(s);
+});
+test('backfill and today share the same weekly quota',t=>{
+ const {s,c}=backfillSetup(t,{type:'weekly',times:2});checkIn(s,c.id);
+ backfillCheckIn(s,c.id,'2026-09-21');assert.equal(weekProgress(s,c).done,2);
+ assert.equal(canBackfill(s,c,'2026-09-22'),false);assert.throws(()=>backfillCheckIn(s,c.id,'2026-09-22'));
+ assert.equal(balance(s),20);validate(s);
+});
+test('backfill reaching weekly quota prevents an extra check-in today',t=>{
+ const {s,c}=backfillSetup(t,{type:'weekly',times:1});backfillCheckIn(s,c.id,'2026-09-21');
+ assert.equal(canCheckIn(s,c),false);assert.throws(()=>checkIn(s,c.id));assert.equal(s.checkins.length,1);validate(s);
+});
+test('archived cycles reject backfill',t=>{
+ const {s,c}=backfillSetup(t,{type:'daily'},'2026-09-21','2026-09-27');
+ for(const status of ['completed','ended']){
+  const copy=structuredClone(s);checkIn(copy,c.id);finishCycle(copy,c.id,status);
+  assert.equal(canBackfill(copy,copy.cycles[0],'2026-09-21'),false);
+  assert.throws(()=>backfillCheckIn(copy,c.id,'2026-09-21'));assert.equal(copy.checkins.length,1);validate(copy);
+ }
+});
+test('Monday rollover rejects a date that was eligible when the dialog opened',t=>{
+ const {s,c}=backfillSetup(t,{type:'daily'},'2026-09-21','2026-10-04');
+ assert.equal(canBackfill(s,c,'2026-09-26'),true);
+ t.mock.timers.setTime(+parseDate('2026-09-28'));
+ for(const date of ['2026-09-26','2026-09-27','2026-09-28']){
+  assert.equal(canBackfill(s,c,date),false);assert.throws(()=>backfillCheckIn(s,c.id,date));
+ }
+ checkIn(s,c.id);assert.equal(s.checkins.length,1);validate(s);
 });
