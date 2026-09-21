@@ -1,4 +1,4 @@
-const CACHE='habit-seasons-shell-v6';
+const CACHE='habit-seasons-shell-v7';
 const ASSETS=['./','./index.html','./style.css','./app.js','./model.js','./habit-icons.js','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('habit-seasons-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
