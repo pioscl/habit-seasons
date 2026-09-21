@@ -1,5 +1,6 @@
 export const VERSION=2;
-export const HABIT_ICONS={home:"日常",leaf:"健康",run:"跑步",book:"阅读",water:"喝水",moon:"睡眠",sun:"早起",heart:"关爱",dumbbell:"力量",bike:"骑行",calm:"冥想",music:"音乐",pencil:"写作",code:"编程",coffee:"休息",language:"语言"};
+import {HABIT_ICONS} from './habit-icons.js';
+export {HABIT_ICONS};
 export const uid=()=>crypto.randomUUID();
 export function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 export function parseDate(s){return new Date(`${s}T12:00:00`)}

@@ -1,0 +1,151 @@
+export const HABIT_ICON_GROUPS = [
+  {
+    "name": "身心健康",
+    "icons": [
+      "leaf",
+      "water",
+      "moon",
+      "sun",
+      "heart",
+      "calm",
+      "pill",
+      "tooth"
+    ]
+  },
+  {
+    "name": "运动活力",
+    "icons": [
+      "run",
+      "dumbbell",
+      "bike",
+      "walk",
+      "swim",
+      "stretch",
+      "ball",
+      "mountain"
+    ]
+  },
+  {
+    "name": "学习创作",
+    "icons": [
+      "book",
+      "pencil",
+      "code",
+      "language",
+      "music",
+      "palette",
+      "camera",
+      "brain"
+    ]
+  },
+  {
+    "name": "生活日常",
+    "icons": [
+      "home",
+      "coffee",
+      "meal",
+      "fruit",
+      "clean",
+      "plant",
+      "pet",
+      "wallet"
+    ]
+  },
+  {
+    "name": "专注成长",
+    "icons": [
+      "target",
+      "timer",
+      "phone",
+      "journal",
+      "smile",
+      "people",
+      "globe",
+      "briefcase"
+    ]
+  }
+];
+export const HABIT_ICONS = {
+  "leaf": "健康",
+  "water": "喝水",
+  "moon": "睡眠",
+  "sun": "早起",
+  "heart": "关爱",
+  "calm": "冥想",
+  "pill": "用药",
+  "tooth": "护齿",
+  "run": "跑步",
+  "dumbbell": "力量",
+  "bike": "骑行",
+  "walk": "散步",
+  "swim": "游泳",
+  "stretch": "拉伸",
+  "ball": "球类",
+  "mountain": "徒步",
+  "book": "阅读",
+  "pencil": "写作",
+  "code": "编程",
+  "language": "语言",
+  "music": "音乐",
+  "palette": "绘画",
+  "camera": "摄影",
+  "brain": "学习",
+  "home": "日常",
+  "coffee": "休息",
+  "meal": "饮食",
+  "fruit": "水果",
+  "clean": "清洁",
+  "plant": "植物",
+  "pet": "宠物",
+  "wallet": "储蓄",
+  "target": "目标",
+  "timer": "专注",
+  "phone": "少看手机",
+  "journal": "日记",
+  "smile": "心情",
+  "people": "社交",
+  "globe": "探索",
+  "briefcase": "工作"
+};
+export const HABIT_ICON_PATHS = {
+  "leaf": "<path d=\"M20 4C8 2 2 10 7 16S22 14 20 4Z\"/><path d=\"M4 21 16 9\"/>",
+  "water": "<path d=\"M12 3C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-12Z\"/><path d=\"M9 15a3 3 0 0 0 3 3\"/>",
+  "moon": "<path d=\"M20 14A9 9 0 0 1 10 4a9 9 0 1 0 10 10Z\"/>",
+  "sun": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1\"/>",
+  "heart": "<path d=\"M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1C-1 10 6 16 12 21c6-5 13-11 8-16Z\"/>",
+  "calm": "<circle cx=\"12\" cy=\"5\" r=\"2\"/><path d=\"m7 15 2-5h6l2 5 4 2-5 3H8l-5-3 4-2m2-1 3 3 3-3M8 20l4-3 4 3\"/>",
+  "pill": "<path d=\"m10 4-6 6a6 6 0 0 0 8 8l6-6a6 6 0 0 0-8-8ZM7 7l10 10\"/>",
+  "tooth": "<path d=\"M12 5C4-1 1 8 5 13c1 2 0 8 3 8 2 0 1-6 4-6s2 6 4 6c3 0 2-6 3-8 4-5 1-14-7-8Z\"/>",
+  "run": "<path d=\"m7 20 4-6-4-4 5-4 4 5h4M3 11l4-1M11 14l5 3v4\"/><circle cx=\"15\" cy=\"3\" r=\"1.5\"/>",
+  "dumbbell": "<path d=\"M7 12h10M3 9v6m4-9v12m10-12v12m4-9v6M3 12h4m10 0h4\"/>",
+  "bike": "<circle cx=\"5\" cy=\"16\" r=\"4\"/><circle cx=\"19\" cy=\"16\" r=\"4\"/><path d=\"m5 16 5-8 5 8H5m10 0 3-11h-3M8 5h4m-2 0v3\"/>",
+  "walk": "<circle cx=\"13\" cy=\"4\" r=\"2\"/><path d=\"m7 12 3-4 4 1 2 4 4 1M12 9l-2 6-5 6m5-6 5 2 1 5\"/>",
+  "swim": "<path d=\"m3 12 5-5 6 5m-6-5 6-3 3 2M2 17q3-3 6 0t6 0 6 0M2 21q3-3 6 0t6 0 6 0\"/><circle cx=\"19\" cy=\"10\" r=\"2\"/>",
+  "stretch": "<circle cx=\"12\" cy=\"4\" r=\"2\"/><path d=\"m3 8 9 3 9-3M12 11v5m-6 5 6-5 6 5\"/>",
+  "ball": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3v18M6 5c8 3 8 11 0 14M18 5c-8 3-8 11 0 14\"/>",
+  "mountain": "<path d=\"m2 20 7-14 5 9 3-6 5 11H2ZM6 12l3 1 2-3\"/>",
+  "book": "<path d=\"M12 5v15M3 4c4-1 7 0 9 2 2-2 5-3 9-2v14c-4-1-7 0-9 2-2-2-5-3-9-2z\"/>",
+  "pencil": "<path d=\"m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14v6Z\"/>",
+  "code": "<path d=\"m7 6-6 6 6 6m10-12 6 6-6 6m-3-15-4 18\"/>",
+  "language": "<path d=\"M3 5h12M9 2v3M5 5c0 5 4 9 8 11M13 5c0 5-4 9-10 12m10 4 4-11 4 11m-6-4h4\"/>",
+  "music": "<path d=\"M9 18V5l11-2v13M9 9l11-2\"/><ellipse cx=\"6\" cy=\"18\" rx=\"3\" ry=\"3\"/><ellipse cx=\"17\" cy=\"16\" rx=\"3\" ry=\"3\"/>",
+  "palette": "<path d=\"M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-4 2 2 0 0 1 1-4h3a3 3 0 0 0 3-3c0-4-4-7-9-7Z\"/><circle cx=\"8\" cy=\"8\" r=\"1\"/><circle cx=\"13\" cy=\"6\" r=\"1\"/><circle cx=\"17\" cy=\"9\" r=\"1\"/><circle cx=\"6\" cy=\"13\" r=\"1\"/>",
+  "camera": "<path d=\"M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11H2V8a2 2 0 0 1 2-2Z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>",
+  "brain": "<path d=\"M12 5c-3-5-8-1-7 3-4 2-3 7 0 8-1 5 5 7 7 3 2 4 8 2 7-3 3-1 4-6 0-8 1-4-4-8-7-3Zm0 0v14M5 8l3 2m-3 6 3-2m11-6-3 2m3 6-3-2\"/>",
+  "home": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"5\"/><path d=\"m8 12 3 3 5-6\"/>",
+  "coffee": "<path d=\"M4 8h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8ZM17 9h2a3 3 0 1 1 0 6h-2M7 2v2m4-2v2m4-2v2M3 22h16\"/>",
+  "meal": "<path d=\"M4 3v7a3 3 0 0 0 6 0V3M7 3v19m13 0V3c-5 3-5 11 0 11\"/>",
+  "fruit": "<path d=\"M12 7c-9-6-13 6-7 12 2 3 5 1 7 1s5 2 7-1c6-6 2-18-7-12Zm0 0V3m0 2c0-3 4-4 6-3-1 3-3 4-6 3Z\"/>",
+  "clean": "<path d=\"m14 3-4 10m-4 0 7 3-3 6-9-4 5-5Zm11 5 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z\"/>",
+  "plant": "<path d=\"M12 14V8m0 6c-6 0-9-4-9-9 6 0 9 4 9 9Zm0-4c0-5 4-8 9-8 0 5-4 8-9 8ZM6 15h12l-2 7H8l-2-7Z\"/>",
+  "pet": "<ellipse cx=\"6\" cy=\"9\" rx=\"2\" ry=\"3\"/><ellipse cx=\"11\" cy=\"5\" rx=\"2\" ry=\"3\"/><ellipse cx=\"17\" cy=\"6\" rx=\"2\" ry=\"3\"/><ellipse cx=\"21\" cy=\"11\" rx=\"2\" ry=\"3\"/><path d=\"M5 19c0-3 4-7 7-7s7 4 7 7c0 4-4 1-7 1s-7 3-7-1Z\"/>",
+  "wallet": "<path d=\"M20 7V4H5a3 3 0 0 0 0 6h17v11H5a3 3 0 0 1-3-3V7m20 6h-6v5h6\"/><circle cx=\"18\" cy=\"15.5\" r=\".5\"/>",
+  "target": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"5\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/>",
+  "timer": "<circle cx=\"12\" cy=\"14\" r=\"8\"/><path d=\"M9 2h6M12 2v4m6 2 2-2M12 10v5l3 2\"/>",
+  "phone": "<rect x=\"6\" y=\"2\" width=\"12\" height=\"20\" rx=\"3\"/><path d=\"M10 5h4m-3 14h2\"/>",
+  "journal": "<rect x=\"5\" y=\"3\" width=\"15\" height=\"18\" rx=\"2\"/><path d=\"M3 7h4M3 12h4M3 17h4M11 8h5m-5 4h5m-5 4h3\"/>",
+  "smile": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M8 14c2 4 6 4 8 0M8 8v1m8-1v1\"/>",
+  "people": "<circle cx=\"9\" cy=\"7\" r=\"3\"/><path d=\"M2 21v-3a7 7 0 0 1 14 0v3M16 4a3 3 0 0 1 0 6m2 4c3 1 4 3 4 7\"/>",
+  "globe": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><ellipse cx=\"12\" cy=\"12\" rx=\"4\" ry=\"9\"/><path d=\"M3 12h18\"/>",
+  "briefcase": "<rect x=\"2\" y=\"7\" width=\"20\" height=\"14\" rx=\"2\"/><path d=\"M8 7V3h8v4M2 12c6 4 14 4 20 0M12 12v5\"/>"
+};

@@ -50,8 +50,8 @@ test('v1 weekday schedule migrates separately from current template settings',()
  for(const t of s.templates)t.days=[0,1,2,3,4,5,6];c.snapshot.days=[2,4];delete c.frequency;
  assert.deepEqual(upgrade(s).cycles[0].frequency,{type:'weekdays',days:[2,4]});c.snapshot.days=[9];assert.throws(()=>upgrade(s));
 });
-test('all 16 icons roundtrip and invalid frequencies fail without creating cycles',()=>{
- const s=initialState();assert.equal(Object.keys(HABIT_ICONS).length,16);
+test('all 40 icons roundtrip and invalid frequencies fail without creating cycles',()=>{
+ const s=initialState();assert.equal(Object.keys(HABIT_ICONS).length,40);
  for(const icon of Object.keys(HABIT_ICONS)){s.templates[0].icon=icon;validate(s)}
  for(const frequency of [{type:'weekly',times:0},{type:'weekly',times:8},{type:'weekly',times:1.5},{type:'weekdays',days:[]},{type:'weekdays',days:[1,1]},{type:'monthly'}])assert.throws(()=>startCycle(s,s.templates[0].id,today(),today(),frequency));
  assert.equal(s.cycles.length,0);
