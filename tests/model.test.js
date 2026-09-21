@@ -56,3 +56,31 @@ test('all 40 icons roundtrip and invalid frequencies fail without creating cycle
  for(const frequency of [{type:'weekly',times:0},{type:'weekly',times:8},{type:'weekly',times:1.5},{type:'weekdays',days:[]},{type:'weekdays',days:[1,1]},{type:'monthly'}])assert.throws(()=>startCycle(s,s.templates[0].id,today(),today(),frequency));
  assert.equal(s.cycles.length,0);
 });
+
+
+test('ending an empty cycle removes only that cycle and allows a fresh start',()=>{
+ const {s,c}=setup(),templates=structuredClone(s.templates);
+ const other=startCycle(s,s.templates[1].id,today(),today());checkIn(s,other.id);finishCycle(s,other.id,'completed');
+ const preserved=structuredClone({other,checkins:s.checkins,points:balance(s)});
+ assert.equal(finishCycle(s,c.id,'ended'),'deleted');
+ assert.deepEqual(s.cycles,[preserved.other]);assert.deepEqual(s.templates,templates);
+ assert.deepEqual(s.checkins,preserved.checkins);assert.equal(balance(s),preserved.points);
+ const next=startCycle(s,c.templateId,today(),shiftDate(today(),6));
+ assert.equal(s.cycles.filter(x=>x.templateId===c.templateId).length,1);assert.notEqual(next.id,c.id);
+ validate(JSON.parse(JSON.stringify(s)));
+});
+test('ending after undoing the only check-in deletes the empty cycle',()=>{
+ const {s,c}=setup();checkIn(s,c.id);undoCheckIn(s,c.id);
+ assert.equal(finishCycle(s,c.id,'ended'),'deleted');assert.equal(s.cycles.length,0);
+ assert.equal(s.checkins.length,0);assert.equal(balance(s),0);validate(s);
+});
+test('a real check-in is retained even when completion rounds to zero percent',()=>{
+ const s=initialState(),c=startCycle(s,s.templates[0].id,today(),shiftDate(today(),365));checkIn(s,c.id);
+ assert.equal(Math.round(100/expected(c)),0);assert.equal(finishCycle(s,c.id,'ended'),'ended');
+ assert.equal(s.cycles[0].status,'ended');assert.equal(s.checkins.length,1);assert.equal(balance(s),10);validate(s);
+});
+test('explicit completion still archives a zero-check-in cycle at its end date',()=>{
+ const s=initialState(),c=startCycle(s,s.templates[0].id,today(),today());
+ assert.equal(finishCycle(s,c.id,'completed'),'completed');assert.equal(s.cycles.length,1);
+ assert.equal(c.status,'completed');validate(s);
+});
