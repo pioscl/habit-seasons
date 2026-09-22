@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,validate,upgrade,balance,today,startCycle,checkIn,undoCheckIn,redeem} from '../dist/model.js';
-import {createGoal,addGoalProgress,editGoalProgress,changeGoalStatus,changeGoalDeadline,saveGoalMilestone,deleteGoalMilestone,goalProgress,goalEarned,goalPercent,milestoneReached} from '../dist/goal-model.js';
+import {createGoal,addGoalProgress,editGoalProgress,changeGoalStatus,changeGoalDeadline,changeGoalIcon,saveGoalMilestone,deleteGoalMilestone,goalProgress,goalEarned,goalPercent,milestoneReached} from '../dist/goal-model.js';
 const fields=()=>({title:'LeetCode 100 道',targetValue:100,unit:'题',completionPoints:500,deadline:null,milestones:[{percentage:25,points:50},{percentage:50,points:100},{percentage:80,points:150}]});
 function setup(overrides={}){const s=initialState(),g=createGoal(s,{...fields(),...overrides});return {s,id:g.id}}
 const goal=(s,id)=>s.goals.find(g=>g.id===id);
@@ -106,4 +106,19 @@ test('inconsistent imported goal state, unlocked milestones and rewards are reje
  const mutations=[g=>g.targetValue=200,g=>g.completionPoints=999,g=>g.status='active',g=>g.completedAt=null,g=>g.deadline='2028-01-01',g=>g.progressEvents[0].value=50,g=>g.progressEvents.push({...g.progressEvents[0]}),g=>g.milestones[0].points=999,g=>g.milestones[0].firstReachedAt=null,g=>g.milestones.shift(),g=>g.history.pop(),g=>g.history.at(-1).delta=10000];
  for(const mutate of mutations){const copy=structuredClone(s);mutate(copy.goals[0]);assert.throws(()=>validate(copy))}
  const copy=structuredClone(s);copy.goals[0].progressEvents[0].edits.push({from:99,to:100,at:new Date().toISOString()});assert.throws(()=>validate(copy));
+});
+
+
+test('goal icons survive backups, accept legacy goals, and never alter completed progress or rewards',()=>{
+ const {s,id}=setup({icon:'code'});addGoalProgress(s,id,100);
+ assert.equal(upgrade(JSON.parse(JSON.stringify(s))).goals[0].icon,'code');
+ const before=structuredClone(s);changeGoalIcon(s,id,'book');
+ const expected=structuredClone(before);expected.goals[0].icon='book';assert.deepEqual(s,expected);
+ assert.equal(balance(s),balance(before));validate(s);
+ const legacy=structuredClone(s);delete legacy.goals[0].icon;
+ assert.doesNotThrow(()=>upgrade(legacy));assert.equal(createGoal(s,fields()).icon,'target');
+ for(const icon of ['unknown','__proto__',null,42,['book']]){
+  unchanged(s,()=>changeGoalIcon(s,id,icon));unchanged(s,()=>createGoal(s,{...fields(),icon}));
+  const corrupt=structuredClone(s);corrupt.goals[0].icon=icon;assert.throws(()=>upgrade(corrupt));
+ }
 });

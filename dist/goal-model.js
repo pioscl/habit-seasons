@@ -1,3 +1,4 @@
+import {HABIT_ICONS} from './habit-icons.js';
 import {uid,dateValid} from './core.js';
 import {balance} from './wallet.js';
 import {SCALE,quantityUnits,goalProgress,goalEarned,milestoneReached} from './goal-math.js';
@@ -8,6 +9,7 @@ const textValid=(text,max)=>typeof text==='string'&&text.trim().length>0&&text.l
 const timeValid=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(value)&&Number.isFinite(Date.parse(value));
 const rewardValid=value=>Number.isSafeInteger(value)&&value>=0&&value<=1000000;
 const positive=value=>quantityUnits(value)!==null&&quantityUnits(value)>0;
+const iconValid=value=>typeof value==='string'&&Object.hasOwn(HABIT_ICONS,value);
 const deadlineValid=value=>value===null||dateValid(value);
 const transitions={active:['paused','abandoned'],paused:['active','abandoned'],abandoned:['active'],completed:[]};
 function now(){return new Date().toISOString()}
@@ -28,7 +30,7 @@ export function createGoal(state,fields){
  ensure(rewardValid(fields.completionPoints),'完成奖励须为 0–1,000,000 的整数。');
  const deadline=fields.deadline||null;ensure(deadlineValid(deadline),'截止日期无效。');
  ensure(Array.isArray(fields.milestones||[])&&(fields.milestones||[]).length<=50,'最多设置 50 个里程碑。');
- const at=now(),goal={id:uid(),title:fields.title.trim(),targetValue:fields.targetValue,unit:fields.unit.trim(),completionPoints:fields.completionPoints,deadline,status:'active',createdAt:at,completedAt:null,progressEvents:[],milestones:(fields.milestones||[]).map(makeMilestone),history:[]};
+ const at=now(),goal={id:uid(),title:fields.title.trim(),icon:fields.icon===undefined?'target':fields.icon,targetValue:fields.targetValue,unit:fields.unit.trim(),completionPoints:fields.completionPoints,deadline,status:'active',createdAt:at,completedAt:null,progressEvents:[],milestones:(fields.milestones||[]).map(makeMilestone),history:[]};
  goal.history.push(event('created',at,{targetValue:goal.targetValue,completionPoints:goal.completionPoints,deadline}));
  validateGoals({goals:[goal]});ensure(state.goals.length<10000,'目标数量已达上限，请先导出备份。');state.goals.push(goal);return goal;
 }
@@ -85,6 +87,10 @@ export function changeGoalStatus(state,id,status){
   ensure(transitions[goal.status]?.includes(status),'不支持这一状态变更。');setStatus(goal,status,'manual',at);
  });
 }
+export function changeGoalIcon(state,id,icon){
+ ensure(iconValid(icon),'请选择有效的目标图标。');
+ return updateGoal(state,id,goal=>{goal.icon=icon});
+}
 export function changeGoalDeadline(state,id,deadline){
  ensure(deadlineValid(deadline),'截止日期无效。');
  return updateGoal(state,id,(goal,at)=>{
@@ -112,6 +118,7 @@ export function deleteGoalMilestone(state,id,milestoneId){
 export function validateGoals(state){
  validList(state.goals,10000,'目标数据无效。');
  for(const goal of state.goals){
+  ensure(!Object.hasOwn(goal,'icon')||iconValid(goal.icon),'目标图标无效。');
   ensure(textValid(goal.title,60)&&textValid(goal.unit,12)&&positive(goal.targetValue)&&rewardValid(goal.completionPoints),'目标标题、总量、单位或积分无效。');
   ensure(Object.hasOwn(transitions,goal.status)&&timeValid(goal.createdAt)&&deadlineValid(goal.deadline),'目标状态或日期无效。');
   validList(goal.progressEvents,100000,'目标进度记录无效。');

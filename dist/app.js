@@ -52,9 +52,9 @@ function render(){el.innerHTML=`<aside class="sidebar"><div class="brand"><img s
 function choiceField(name,title,options,value,kind=''){
  return `<fieldset class="choice-field ${kind}"><legend>${title}</legend><div class="choice-options">${options.map(([v,label])=>`<label><input type="radio" name="${name}" value="${v}" ${String(value)===String(v)?'checked':''} required><span>${label}</span></label>`).join('')}</div></fieldset>`;
 }
-function iconPicker(selected){
+function iconPicker(selected,label='习惯图标'){
  const active=HABIT_ICON_GROUPS.findIndex(group=>group.icons.includes(selected));
- return `<fieldset class="icon-field"><legend>习惯图标 <span id="selected-icon" aria-hidden="true">${icon(selected)}</span></legend>
+ return `<fieldset class="icon-field"><legend>${esc(label)} <span id="selected-icon" aria-hidden="true">${icon(selected)}</span></legend>
  <div class="icon-categories" aria-label="图标分类">${HABIT_ICON_GROUPS.map((group,i)=>`<button type="button" data-action="icon-category" data-id="${i}" aria-pressed="${i===active}">${group.name}</button>`).join('')}</div>
  ${HABIT_ICON_GROUPS.map((group,i)=>`<div class="icon-picker" data-icon-group="${i}" ${i===active?'':'hidden'}>${group.icons.map(v=>`<label><input type="radio" name="icon" value="${v}" aria-label="${HABIT_ICONS[v]}" ${selected===v?'checked':''} required><span>${icon(v)}</span></label>`).join('')}</div>`).join('')}</fieldset>`;
 }
@@ -87,7 +87,7 @@ function rewardForm(id){const r=state.rewards.find(x=>x.id===id)||{name:'',cost:
 function confirm(title,body,action,id,label='确认'){modal(title,`<p>${body}</p><div class="modal-actions"><button class="btn secondary" data-action="close">取消</button><button class="btn" data-action="${action}" data-id="${id}">${label}</button></div>`)}
 function download(content,filename){const url=URL.createObjectURL(new Blob([content],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 let pendingImport=null;
-const goalUI=createGoalUI({getState:()=>state,commit,modal,close,toast,esc,icon,head,render,navigate:()=>{page='goals'},confirm});
+const goalUI=createGoalUI({getState:()=>state,commit,modal,close,toast,esc,icon,iconPicker,head,render,navigate:()=>{page='goals'},confirm});
 const actions={
  'habit-view':view=>{if(!['detail','quick'].includes(view))return;habitView=view;try{localStorage.setItem(VIEW_KEY,view)}catch{}render();document.querySelector('.habit-view-switch [aria-pressed="true"]')?.focus({preventScroll:true})},
  'icon-category':id=>{dialog.querySelectorAll('[data-icon-group]').forEach(group=>group.hidden=group.dataset.iconGroup!==id);dialog.querySelectorAll('[data-action="icon-category"]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.id===id)))},
