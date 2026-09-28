@@ -17,11 +17,18 @@ export function scheduled(c,date){
 export function weeklyTarget(c,date){
  const start=weekStart(date),end=shiftDate(start,6);
  const first=start>c.startDate?start:c.startDate,last=end<c.endDate?end:c.endDate;
- return first>last?0:Math.min(c.frequency.times,daysBetween(last,first)+1);
+ if(first>last)return 0;
+ if(c.frequency.type==='weekly')return Math.min(c.frequency.times,daysBetween(last,first)+1);
+ let target=0;for(let d=first;d<=last;d=shiftDate(d,1))if(scheduled(c,d))target++;
+ return target;
 }
 export function weekProgress(s,c,date=today()){
  const start=weekStart(date),end=shiftDate(start,6);
  return {done:s.checkins.filter(x=>x.cycleId===c.id&&x.date>=start&&x.date<=end).length,target:weeklyTarget(c,date)};
+}
+export function hasPendingWeek(s,c,date=today()){
+ const {done,target}=weekProgress(s,c,date);
+ return c.status==='active'&&target>done;
 }
 export function canCheckIn(s,c,date=today()){
  return c.status==='active'&&scheduled(c,date)&&(c.frequency.type!=='weekly'||weekProgress(s,c,date).done<weeklyTarget(c,date));
