@@ -26,10 +26,6 @@ export function weekProgress(s,c,date=today()){
  const start=weekStart(date),end=shiftDate(start,6);
  return {done:s.checkins.filter(x=>x.cycleId===c.id&&x.date>=start&&x.date<=end).length,target:weeklyTarget(c,date)};
 }
-export function hasPendingWeek(s,c,date=today()){
- const {done,target}=weekProgress(s,c,date);
- return c.status==='active'&&target>done;
-}
 export function canCheckIn(s,c,date=today()){
  return c.status==='active'&&scheduled(c,date)&&(c.frequency.type!=='weekly'||weekProgress(s,c,date).done<weeklyTarget(c,date));
 }
