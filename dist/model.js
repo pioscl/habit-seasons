@@ -91,4 +91,21 @@ export function backfillCheckIn(s,cycleId,date){
 }
 export function undoCheckIn(s,cycleId){const c=s.cycles.find(c=>c.id===cycleId),i=s.checkins.findIndex(x=>x.cycleId===cycleId&&x.date===today());ensure(c?.status==='active'&&i>=0,'只能撤销进行中周期的今日打卡。');ensure(balance(s)>=s.checkins[i].points,'这次积分已用于兑换，当前余额不足以撤销。');s.checkins.splice(i,1)}
 export function finishCycle(s,id,status){const c=s.cycles.find(c=>c.id===id);ensure(c?.status==='active','这一期已经结束。');ensure(c.startDate<=today(),'这一期尚未开始。');ensure(['completed','ended'].includes(status),'结束状态无效。');ensure(status!=='completed'||today()>=c.endDate,'到达结束日期后才可完成归档；现在可以提前结束。');if(status==='ended'&&!s.checkins.some(x=>x.cycleId===id)){s.cycles=s.cycles.filter(x=>x.id!==id);return 'deleted'}c.status=status;c.endedAt=today();return status}
-export function redeem(s,id){const r=s.rewards.find(r=>r.id===id);ensure(r&&!r.archived,'奖励不存在或已停用。');ensure(balance(s)>=r.cost,'积分还不够，再积累一点。');const record={id:uid(),rewardId:id,name:r.name,cost:r.cost,redeemedAt:new Date().toISOString()};s.redemptions.push(record);return record}
+export function rewardRedeemed(s,id){return s.redemptions.some(record=>record.rewardId===id)}
+export function rewardAvailable(s,reward){return !!reward&&!reward.archived&&!rewardRedeemed(s,reward.id)}
+export function saveReward(s,fields,id=null){
+ ensure(fields&&nameValid(fields.name)&&int(fields.cost,1),'请填写不超过 60 字的奖励名称和 1–1,000,000 的整数积分。');
+ if(id){
+  const reward=s.rewards.find(r=>r.id===id);ensure(reward,'奖励不存在。');
+  ensure(!rewardRedeemed(s,id),'已兑换的奖励不能修改，请新建一个奖励。');
+  reward.name=fields.name.trim();reward.cost=fields.cost;return reward;
+ }
+ ensure(s.rewards.length<100000,'奖励数量已达上限。');
+ const reward={id:uid(),name:fields.name.trim(),cost:fields.cost,archived:false};s.rewards.push(reward);return reward;
+}
+export function archiveReward(s,id,archived=true){
+ const reward=s.rewards.find(r=>r.id===id);ensure(reward&&typeof archived==='boolean','奖励不存在或状态无效。');
+ ensure(!rewardRedeemed(s,id),'已兑换的奖励已保留在记录中，请新建一个奖励。');
+ reward.archived=archived;return reward;
+}
+export function redeem(s,id){const r=s.rewards.find(r=>r.id===id);ensure(r,'奖励不存在。');ensure(!rewardRedeemed(s,id),'这个奖励已经兑换过了，请新建一个奖励。');ensure(rewardAvailable(s,r),'奖励已收起，请先恢复。');ensure(balance(s)>=r.cost,'积分还不够，再积累一点。');const record={id:uid(),rewardId:id,name:r.name,cost:r.cost,redeemedAt:new Date().toISOString()};s.redemptions.push(record);return record}
