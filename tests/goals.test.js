@@ -1,14 +1,15 @@
+import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialState,validate,upgrade,balance,today,startCycle,checkIn,undoCheckIn,redeem} from '../dist/model.js';
+import {validate,upgrade,balance,today,startCycle,checkIn,undoCheckIn,redeem} from '../dist/model.js';
 import {createGoal,addGoalProgress,editGoalProgress,changeGoalStatus,changeGoalDeadline,changeGoalIcon,saveGoalMilestone,deleteGoalMilestone,goalProgress,goalEarned,goalPercent,milestoneReached} from '../dist/goal-model.js';
 const fields=()=>({title:'LeetCode 100 道',targetValue:100,unit:'题',completionPoints:500,deadline:null,milestones:[{percentage:25,points:50},{percentage:50,points:100},{percentage:80,points:150}]});
-function setup(overrides={}){const s=initialState(),g=createGoal(s,{...fields(),...overrides});return {s,id:g.id}}
+function setup(overrides={}){const s=populatedState(),g=createGoal(s,{...fields(),...overrides});return {s,id:g.id}}
 const goal=(s,id)=>s.goals.find(g=>g.id===id);
 function unchanged(s,operation){const before=structuredClone(s);assert.throws(operation);assert.deepEqual(s,before)}
 
 test('goals are independent and require a finite positive target and unit',()=>{
- const s=initialState();for(const change of [{targetValue:0},{targetValue:-1},{targetValue:Infinity},{targetValue:NaN},{targetValue:0.0000001},{targetValue:1000000001},{unit:''},{title:''},{completionPoints:-1},{completionPoints:1.5},{deadline:'2026-02-30'}])unchanged(s,()=>createGoal(s,{...fields(),...change}));
+ const s=populatedState();for(const change of [{targetValue:0},{targetValue:-1},{targetValue:Infinity},{targetValue:NaN},{targetValue:0.0000001},{targetValue:1000000001},{unit:''},{title:''},{completionPoints:-1},{completionPoints:1.5},{deadline:'2026-02-30'}])unchanged(s,()=>createGoal(s,{...fields(),...change}));
  const {s:state,id}=setup();assert.equal(state.cycles.length,0);assert.equal(goalProgress(goal(state,id)),0);assert.equal(balance(state),0);validate(state);
  const altered=structuredClone(state);altered.goals[0].targetValue=200;assert.throws(()=>validate(altered));
 });
@@ -94,7 +95,7 @@ test('zero point goals and milestones still complete and lock correctly',()=>{
  const {s,id}=setup({completionPoints:0,milestones:[{percentage:50,points:0}]});addGoalProgress(s,id,100);assert.equal(goal(s,id).status,'completed');assert.ok(goal(s,id).milestones[0].firstReachedAt);assert.equal(balance(s),0);validate(s);
 });
 test('v2 backups migrate without losing habits, check-ins, redemptions or balance',()=>{
- const s=initialState(),c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);s.rewards[0].cost=5;redeem(s,s.rewards[0].id);s.schemaVersion=2;delete s.goals;
+ const s=populatedState(),c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);s.rewards[0].cost=5;redeem(s,s.rewards[0].id);s.schemaVersion=2;delete s.goals;
  const original=structuredClone(s),next=upgrade(s);assert.deepEqual(s,original);assert.equal(next.schemaVersion,3);assert.deepEqual(next.goals,[]);assert.deepEqual(next.checkins,s.checkins);assert.deepEqual(next.redemptions,s.redemptions);assert.equal(balance(next),5);
 });
 test('goal backup roundtrip preserves progress edits, rollback, rewards and all history',()=>{

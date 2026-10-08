@@ -1,6 +1,7 @@
+import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {weeklyTarget,weekProgress,initialState,startCycle,checkIn,backfillCheckIn,undoCheckIn,parseDate} from '../dist/model.js';
+import {weeklyTarget,weekProgress,startCycle,checkIn,backfillCheckIn,undoCheckIn,parseDate} from '../dist/model.js';
 const cycle=(frequency,fields={})=>({id:'c',status:'active',startDate:'2026-09-21',endDate:'2026-10-11',frequency,...fields});
 const state=dates=>({checkins:dates.map(date=>({cycleId:'c',date}))});
 test('whole-week totals cover daily and fixed weekdays without treating future days as missed',()=>{
@@ -27,7 +28,7 @@ test('Sunday progress resets on Monday and unmet counts are not carried forward'
 });
 test('today check-in, backfill and undo update weekly progress',t=>{
  t.mock.timers.enable({apis:['Date'],now:parseDate('2026-09-21')});
- const s=initialState(),c=startCycle(s,s.templates[0].id,'2026-09-21','2026-10-04',{type:'weekly',times:3});
+ const s=populatedState(),c=startCycle(s,s.templates[0].id,'2026-09-21','2026-10-04',{type:'weekly',times:3});
  t.mock.timers.setTime(+parseDate('2026-09-23'));
  backfillCheckIn(s,c.id,'2026-09-21');checkIn(s,c.id);
  assert.deepEqual(weekProgress(s,c),{done:2,target:3});

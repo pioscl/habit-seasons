@@ -1,7 +1,8 @@
+import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialState,startCycle,checkIn,today,balance,upgrade,validate,saveReward,archiveReward,rewardAvailable,rewardRedeemed,redeem} from '../dist/model.js';
-function funded(){const s=initialState();s.templates[0].points=1000;const c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);return s}
+import {initialState,deleteReward,startCycle,checkIn,today,balance,upgrade,validate,saveReward,archiveReward,rewardAvailable,rewardRedeemed,redeem} from '../dist/model.js';
+function funded(){const s=populatedState();s.templates[0].points=1000;const c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);return s}
 function unchanged(s,fn){const before=structuredClone(s);assert.throws(fn);assert.deepEqual(s,before)}
 test('a reward can be redeemed once, then becomes read-only and cannot be restored',()=>{
  const s=funded(),r=saveReward(s,{name:'买一本书',cost:100});
@@ -39,10 +40,32 @@ test('legacy repeated redemptions preserve snapshots and balance but cannot be r
  assert.equal(balance(restored),600);assert.deepEqual(restored.redemptions.slice(0,2),before.redemptions);validate(restored);
 });
 test('failed edits and insufficient funds leave instances and redemptions intact',()=>{
- const s=initialState(),r=s.rewards[0];
+ const s=populatedState(),r=s.rewards[0];
  for(const fields of [{name:'',cost:100},{name:'书',cost:0},{name:'书',cost:1.5},{name:'书',cost:1000001}]){
   unchanged(s,()=>saveReward(s,fields));unchanged(s,()=>saveReward(s,fields,r.id));
  }
  unchanged(s,()=>saveReward(s,{name:'书',cost:100},'missing'));
  unchanged(s,()=>redeem(s,r.id));assert.equal(rewardAvailable(s,r),true);
+});
+
+test('new installations and round-tripped backups have no pre-created data',()=>{
+ const s=initialState();
+ for(const key of ['templates','cycles','checkins','rewards','redemptions','goals'])assert.deepEqual(s[key],[]);
+ assert.equal(balance(s),0);assert.deepEqual(upgrade(JSON.parse(JSON.stringify(s))),s);
+ const r=saveReward(s,{name:'自己的奖励',cost:100});deleteReward(s,r.id);
+ assert.deepEqual(upgrade(JSON.parse(JSON.stringify(s))),initialState());
+});
+test('deleting pending or legacy hidden rewards removes them permanently without changing the wallet',()=>{
+ const s=funded(),claimed=saveReward(s,{name:'已兑换',cost:100});redeem(s,claimed.id);
+ const history=structuredClone(s.redemptions),startingBalance=balance(s);
+ for(const archived of [false,true]){
+  const r=saveReward(s,{name:'待删除',cost:200});r.archived=archived;
+  deleteReward(s,r.id);assert.equal(s.rewards.some(x=>x.id===r.id),false);
+  assert.equal(balance(s),startingBalance);assert.deepEqual(s.redemptions,history);
+  const restored=upgrade(JSON.parse(JSON.stringify(s)));
+  assert.equal(restored.rewards.some(x=>x.id===r.id),false);
+  unchanged(s,()=>redeem(s,r.id));unchanged(s,()=>archiveReward(s,r.id,false));
+ }
+ assert.equal(s.rewards.some(x=>x.id===claimed.id),true);
+ unchanged(s,()=>deleteReward(s,claimed.id));unchanged(s,()=>deleteReward(s,'missing'));validate(s);
 });

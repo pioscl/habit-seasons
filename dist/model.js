@@ -41,7 +41,7 @@ export function expected(c,until=c.endDate){
  }else for(let d=c.startDate;d<=end;d=shiftDate(d,1))if(scheduled(c,d))n++;
  return n;
 }
-export function initialState(){return{schemaVersion:VERSION,revision:0,templates:[{id:uid(),name:'轻断食',icon:'leaf',difficulty:'medium',points:10,archived:false},{id:uid(),name:'运动',icon:'run',difficulty:'hard',points:20,archived:false},{id:uid(),name:'阅读',icon:'book',difficulty:'easy',points:5,archived:false}],cycles:[],checkins:[],rewards:[{id:uid(),name:'买一本书',cost:300,archived:false},{id:uid(),name:'买一个游戏',cost:800,archived:false},{id:uid(),name:'看演唱会',cost:2000,archived:false}],redemptions:[],goals:[],lastExportAt:null}}
+export function initialState(){return{schemaVersion:VERSION,revision:0,templates:[],cycles:[],checkins:[],rewards:[],redemptions:[],goals:[],lastExportAt:null}}
 const ensure=(ok,msg)=>{if(!ok)throw new Error(msg)};
 const nameValid=s=>typeof s==='string'&&s.trim().length>0&&s.length<=60;
 const int=(v,min=0,max=1000000)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
@@ -102,6 +102,11 @@ export function saveReward(s,fields,id=null){
  }
  ensure(s.rewards.length<100000,'奖励数量已达上限。');
  const reward={id:uid(),name:fields.name.trim(),cost:fields.cost,archived:false};s.rewards.push(reward);return reward;
+}
+export function deleteReward(s,id){
+ const index=s.rewards.findIndex(r=>r.id===id);ensure(index>=0,'奖励不存在。');
+ ensure(!rewardRedeemed(s,id),'已兑换的奖励需保留记录，不能删除。');
+ s.rewards.splice(index,1);
 }
 export function archiveReward(s,id,archived=true){
  const reward=s.rewards.find(r=>r.id===id);ensure(reward&&typeof archived==='boolean','奖励不存在或状态无效。');

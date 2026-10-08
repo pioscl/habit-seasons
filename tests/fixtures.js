@@ -1,0 +1,3 @@
+import {initialState,uid} from '../dist/model.js';
+// Explicit sample data for tests; new installations remain empty.
+export function populatedState(){return{...initialState(),templates:[{id:uid(),name:'轻断食',icon:'leaf',difficulty:'medium',points:10,archived:false},{id:uid(),name:'运动',icon:'run',difficulty:'hard',points:20,archived:false},{id:uid(),name:'阅读',icon:'book',difficulty:'easy',points:5,archived:false}],cycles:[],checkins:[],rewards:[{id:uid(),name:'买一本书',cost:300,archived:false},{id:uid(),name:'买一个游戏',cost:800,archived:false},{id:uid(),name:'看演唱会',cost:2000,archived:false}],redemptions:[],goals:[],lastExportAt:null}}
