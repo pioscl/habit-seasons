@@ -96,7 +96,7 @@ test('zero point goals and milestones still complete and lock correctly',()=>{
 });
 test('v2 backups migrate without losing habits, check-ins, redemptions or balance',()=>{
  const s=populatedState(),c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);s.rewards[0].cost=5;redeem(s,s.rewards[0].id);s.schemaVersion=2;delete s.goals;
- const original=structuredClone(s),next=upgrade(s);assert.deepEqual(s,original);assert.equal(next.schemaVersion,3);assert.deepEqual(next.goals,[]);assert.deepEqual(next.checkins,s.checkins);assert.deepEqual(next.redemptions,s.redemptions);assert.equal(balance(next),5);
+ const original=structuredClone(s),next=upgrade(s);assert.deepEqual(s,original);assert.equal(next.schemaVersion,4);assert.deepEqual(next.goals,[]);assert.deepEqual(next.checkins,s.checkins);assert.deepEqual(next.redemptions,s.redemptions);assert.equal(balance(next),5);
 });
 test('goal backup roundtrip preserves progress edits, rollback, rewards and all history',()=>{
  const {s,id}=setup();addGoalProgress(s,id,100);editGoalProgress(s,id,goal(s,id).progressEvents[0].id,60);changeGoalStatus(s,id,'paused');changeGoalDeadline(s,id,'2027-01-01');

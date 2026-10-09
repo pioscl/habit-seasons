@@ -42,7 +42,7 @@ test('weekly check-in and undo update quota and points together',()=>{
 test('v1 upgrade preserves the cycle snapshot schedule, history and balance',()=>{
  const s=populatedState();const c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);finishCycle(s,c.id,'completed');
  s.schemaVersion=1;for(const t of s.templates)t.days=[1,3,5];c.snapshot.days=[0,1,2,3,4,5,6];delete c.frequency;
- const original=structuredClone(s),v2=upgrade(s);assert.equal(v2.schemaVersion,3);assert.deepEqual(v2.cycles[0].frequency,{type:'daily'});
+ const original=structuredClone(s),v2=upgrade(s);assert.equal(v2.schemaVersion,4);assert.deepEqual(v2.cycles[0].frequency,{type:'daily'});
  assert.deepEqual(v2.checkins,s.checkins);assert.equal(balance(v2),10);assert.equal(v2.cycles[0].status,'completed');assert.deepEqual(s,original);
  assert.equal('days' in v2.templates[0],false);assert.equal('days' in v2.cycles[0].snapshot,false);assert.deepEqual(upgrade(v2),v2);
 });
@@ -80,10 +80,10 @@ test('a real check-in is retained even when completion rounds to zero percent',(
  assert.equal(Math.round(100/expected(c)),0);assert.equal(finishCycle(s,c.id,'ended'),'ended');
  assert.equal(s.cycles[0].status,'ended');assert.equal(s.checkins.length,1);assert.equal(balance(s),10);validate(s);
 });
-test('explicit completion still archives a zero-check-in cycle at its end date',()=>{
+test('settlement retains a zero-check-in cycle as failed at its end date',()=>{
  const s=populatedState(),c=startCycle(s,s.templates[0].id,today(),today());
- assert.equal(finishCycle(s,c.id,'completed'),'completed');assert.equal(s.cycles.length,1);
- assert.equal(c.status,'completed');validate(s);
+ assert.equal(finishCycle(s,c.id,'completed'),'failed');assert.equal(s.cycles.length,1);
+ assert.equal(c.status,'failed');validate(s);
 });
 
 
