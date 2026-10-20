@@ -1,6 +1,6 @@
 const CACHE_PREFIX=`habit-seasons:${self.registration.scope}:`;
-const CACHE=`${CACHE_PREFIX}v32`;
-const ASSETS=['./','./index.html','./style.css','./app.js','./local-data.js','./icons.js','./date-picker.js','./model.js','./habit-math.js','./core.js','./wallet.js','./goal-math.js','./goal-model.js','./goal-ui.js','./goals.css','./habit-icons.js','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest'];
+const CACHE=`${CACHE_PREFIX}v33`;
+const ASSETS=['./','./index.html','./style.css','./app.js','./local-data.js','./icons.js','./date-picker.js','./model.js','./habit-math.js','./core.js','./wallet.js','./goal-math.js','./goal-model.js','./goal-ui.js','./goals.css','./habit-icons.js','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
 });
