@@ -73,5 +73,5 @@ export function createGoalUI({getState,commit,modal:openModal,close,toast,esc,ic
   if(form.id==='goal-milestone-form')result=commit(s=>saveGoalMilestone(s,id,{percentage:Number(data.get('percentage')),points:Number(data.get('points'))},form.dataset.milestoneId||null));
   reveal(id);toast(resultMessage(result));
  }
- return {renderPage,actions,submit};
+ return {renderPage,actions,submit,resetView:()=>{tab='current';fieldSequence=0}};
 }

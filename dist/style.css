@@ -62,3 +62,5 @@ dialog{padding:0;border:1px solid #DFE0D4;border-radius:12px;width:calc(100% - 4
 /* One fine-stroke family, with consistent optical size and muted emphasis. */
 .app-icon{display:inline-block;stroke-width:1.5;overflow:visible}.nav button .app-icon{stroke-width:1.5}.nav button.active .app-icon{stroke-width:1.65}.close>.app-icon{width:17px;height:17px}.icon-picker span .app-icon{width:22px;height:22px}.habit-icon>.app-icon,.goal-icon>.app-icon{width:24px;height:24px}.empty-icon>.app-icon{stroke-width:1.2}.brand img{width:35px;height:35px}
 @media(max-width:760px){.brand img{width:32px;height:32px}.nav button .app-icon{width:22px;height:22px}}
+
+.settings-danger h3{color:#935C52}.settings-danger .btn{flex-shrink:0}
