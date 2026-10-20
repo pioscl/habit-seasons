@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {todayPlan,dayPlanSummary,parseDate,startCycle,checkIn,undoCheckIn,backfillCheckIn,weeklyAwards,balance} from '../dist/model.js';
+import {todayPlan,dayPlanSummary,parseDate,startCycle,checkIn,undoCheckIn,backfillCheckIn,weeklyAwards,balance} from '../src/model.js';
 import {populatedState} from './fixtures.js';
 
 const cycle=(frequency={type:'weekly',times:5},fields={})=>({id:'c',status:'active',startDate:'2026-09-21',endDate:'2026-10-11',frequency,...fields});

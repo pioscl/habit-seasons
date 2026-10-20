@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {clearStoredData,LOCAL_DATA_KEY,HABIT_VIEW_KEY} from '../dist/local-data.js';
+import {clearStoredData,LOCAL_DATA_KEY,HABIT_VIEW_KEY} from '../src/local-data.js';
 import {populatedState} from './fixtures.js';
 
 function fixture(raw=JSON.stringify(populatedState())){

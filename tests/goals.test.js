@@ -1,8 +1,8 @@
 import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validate,upgrade,balance,today,startCycle,checkIn,undoCheckIn,redeem} from '../dist/model.js';
-import {createGoal,addGoalProgress,editGoalProgress,changeGoalStatus,changeGoalDeadline,changeGoalIcon,saveGoalMilestone,deleteGoalMilestone,goalProgress,goalEarned,goalPercent,milestoneReached} from '../dist/goal-model.js';
+import {validate,upgrade,balance,today,startCycle,checkIn,undoCheckIn,redeem} from '../src/model.js';
+import {createGoal,addGoalProgress,editGoalProgress,changeGoalStatus,changeGoalDeadline,changeGoalIcon,saveGoalMilestone,deleteGoalMilestone,goalProgress,goalEarned,goalPercent,milestoneReached} from '../src/goal-model.js';
 const fields=()=>({title:'LeetCode 100 道',targetValue:100,unit:'题',completionPoints:500,deadline:null,milestones:[{percentage:25,points:50},{percentage:50,points:100},{percentage:80,points:150}]});
 function setup(overrides={}){const s=populatedState(),g=createGoal(s,{...fields(),...overrides});return {s,id:g.id}}
 const goal=(s,id)=>s.goals.find(g=>g.id===id);

@@ -25,8 +25,19 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install build tools
+        run: npm ci
       - name: Verify core behavior
-        run: node --test tests/*.test.js
+        run: npm test
+      - name: Build static app
+        run: npm run build
+      - name: Verify offline build
+        run: npm run test:build
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload static app

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {populatedState} from './fixtures.js';
-import {startCycle,checkIn,finishCycle,today,shiftDate,validate,upgrade,balance,expected} from '../dist/model.js';
+import {startCycle,checkIn,finishCycle,today,shiftDate,validate,upgrade,balance,expected} from '../src/model.js';
 
 test('a note belongs to the cycle without changing the reusable template',()=>{
  const s=populatedState(),template=s.templates[0],before=structuredClone(template);

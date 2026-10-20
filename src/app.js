@@ -230,7 +230,7 @@ document.addEventListener('input',e=>{if(e.target.closest('#start-form'))updateS
 window.addEventListener('storage',e=>{if(e.key===KEY){load({initialize:false});habitView=readHabitView();pendingImport=null;close();render();toast(e.newValue===null?'本地数据已在另一个页面清除':'记录已与另一个页面同步')}});
 let currentDay=today();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentDay!==today()){currentDay=today();render()}});setInterval(()=>{if(currentDay!==today()){currentDay=today();render()}},60000);
 initDatePickers();load();render();
-if('serviceWorker'in navigator){
+if(import.meta.env?.PROD&&'serviceWorker'in navigator){
  let waitingWorker=null;
  const offerUpdate=worker=>{waitingWorker=worker;const button=document.createElement('button');button.className='update-app';button.textContent='新版本已就绪 · 点击更新';button.onclick=()=>{if(dialog.open){toast('请先保存或关闭当前表单，再更新。');return}waitingWorker.postMessage({type:'ACTIVATE_UPDATE'})};document.querySelector('.update-app')?.remove();document.body.append(button)};
  navigator.serviceWorker.register('./sw.js').then(reg=>{if(reg.waiting)offerUpdate(reg.waiting);reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)offerUpdate(worker)})})}).catch(()=>toast('离线缓存暂未启用，请联网重新打开一次。'));

@@ -1,7 +1,7 @@
 import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {weeklyTarget,weekProgress,startCycle,checkIn,backfillCheckIn,undoCheckIn,parseDate} from '../dist/model.js';
+import {weeklyTarget,weekProgress,startCycle,checkIn,backfillCheckIn,undoCheckIn,parseDate} from '../src/model.js';
 const cycle=(frequency,fields={})=>({id:'c',status:'active',startDate:'2026-09-21',endDate:'2026-10-11',frequency,...fields});
 const state=dates=>({checkins:dates.map(date=>({cycleId:'c',date}))});
 test('whole-week totals cover daily and fixed weekdays without treating future days as missed',()=>{

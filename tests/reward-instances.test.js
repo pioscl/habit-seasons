@@ -1,7 +1,7 @@
 import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialState,deleteReward,startCycle,checkIn,today,balance,upgrade,validate,saveReward,archiveReward,rewardAvailable,rewardRedeemed,redeem} from '../dist/model.js';
+import {initialState,deleteReward,startCycle,checkIn,today,balance,upgrade,validate,saveReward,archiveReward,rewardAvailable,rewardRedeemed,redeem} from '../src/model.js';
 function funded(){const s=populatedState();s.templates[0].points=1000;const c=startCycle(s,s.templates[0].id,today(),today());checkIn(s,c.id);return s}
 function unchanged(s,fn){const before=structuredClone(s);assert.throws(fn);assert.deepEqual(s,before)}
 test('a reward can be redeemed once, then becomes read-only and cannot be restored',()=>{

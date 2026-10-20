@@ -1,7 +1,7 @@
 import {populatedState} from './fixtures.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {backfillCheckIn,canBackfill,parseDate,HABIT_ICONS,upgrade,weekStart,weekProgress,weeklyTarget,canCheckIn,today,shiftDate,monthEnd,daysBetween,expected,balance,validate,startCycle,checkIn,undoCheckIn,finishCycle,redeem} from '../dist/model.js';
+import {backfillCheckIn,canBackfill,parseDate,HABIT_ICONS,upgrade,weekStart,weekProgress,weeklyTarget,canCheckIn,today,shiftDate,monthEnd,daysBetween,expected,balance,validate,startCycle,checkIn,undoCheckIn,finishCycle,redeem} from '../src/model.js';
 function setup(){const s=populatedState();const c=startCycle(s,s.templates[0].id,today(),shiftDate(today(),6));return{s,c}}
 test('full lifecycle: snapshot, points, reward, archive and restart',()=>{const{s,c}=setup();s.templates[0].points=30;s.templates[0].name='新版';assert.equal(c.snapshot.points,10);assert.equal(c.snapshot.name,'轻断食');checkIn(s,c.id);s.rewards[0].cost=5;const r=redeem(s,s.rewards[0].id);s.rewards[0].cost=500;s.rewards[0].name='新版奖励';assert.equal(r.cost,5);assert.equal(r.name,'买一本书');assert.equal(balance(s),5);finishCycle(s,c.id,'ended');const next=startCycle(s,s.templates[0].id,today(),shiftDate(today(),3));assert.equal(next.snapshot.points,30);assert.equal(s.checkins.length,1);assert.equal(s.cycles.length,2);validate(s)});
 test('duplicate check-ins and concurrent active cycles cannot mint points',()=>{const{s,c}=setup();checkIn(s,c.id);assert.throws(()=>checkIn(s,c.id));assert.throws(()=>startCycle(s,c.templateId,today(),today()));assert.equal(balance(s),10);assert.equal(s.checkins.length,1)});

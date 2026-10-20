@@ -1,1 +1,19 @@
-{"name":"habit-seasons","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.js","dev":"python3 -m http.server 5173 --bind 127.0.0.1 --directory dist"}}
+{
+  "name": "habit-seasons",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/build-service-worker.mjs",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.js",
+    "test:build": "node --test tests/build/*.test.js"
+  },
+  "devDependencies": {
+    "vite": "8.3.4"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {populatedState} from './fixtures.js';
-import {startCycle,checkIn,backfillCheckIn,undoCheckIn,finishCycle,validate,upgrade,balance,earnedPoints,parseDate,shiftDate,expected,requiredCheckins,cycleOutcome,weeklyAwards,cyclePoints,saveReward,redeem,canBackfill} from '../dist/model.js';
-import {createGoal,addGoalProgress,editGoalProgress} from '../dist/goal-model.js';
+import {startCycle,checkIn,backfillCheckIn,undoCheckIn,finishCycle,validate,upgrade,balance,earnedPoints,parseDate,shiftDate,expected,requiredCheckins,cycleOutcome,weeklyAwards,cyclePoints,saveReward,redeem,canBackfill} from '../src/model.js';
+import {createGoal,addGoalProgress,editGoalProgress} from '../src/goal-model.js';
 const day='2026-09-21';
 function setup(t,{start=day,end='2026-10-04',frequency={type:'weekly',times:3},rules={points:10,weeklyBonusPoints:10,completionThreshold:90}}={}){
  t.mock.timers.enable({apis:['Date'],now:parseDate(start)});
