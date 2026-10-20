@@ -22,6 +22,35 @@ export function weekProgress(s,c,date=today()){
 export function canCheckIn(s,c,date=today()){
  return c.status==='active'&&scheduled(c,date)&&(c.frequency.type!=='weekly'||weekProgress(s,c,date).done<weeklyTarget(c,date));
 }
+// Classify today's plan from records before today, so checking in today cannot
+// remove a required item from the day's progress denominator.
+export function todayPlan(s,c,date=today()){
+ const start=weekStart(date),last=shiftDate(start,6)<c.endDate?shiftDate(start,6):c.endDate;
+ const done=s.checkins.some(x=>x.cycleId===c.id&&x.date===date);
+ const before=s.checkins.filter(x=>x.cycleId===c.id&&x.date>=start&&x.date<date).length;
+ const week={done:before+(done?1:0),target:weeklyTarget(c,date)};
+ const result={kind:'inactive',done,actionable:false,week,remaining:Math.max(0,week.target-week.done),daysLeft:0,shortfall:0};
+ if(c.status!=='active')return result;
+ if(date<c.startDate)return {...result,kind:'future'};
+ if(date>c.endDate)return {...result,kind:'expired'};
+ if(!scheduled(c,date))return {...result,kind:'rest'};
+ let daysLeft=0;for(let d=date;d<=last;d=shiftDate(d,1))if(scheduled(c,d))daysLeft++;
+ const neededBeforeToday=Math.max(0,week.target-before);
+ const kind=c.frequency.type!=='weekly'?'required':neededBeforeToday===0?'met':neededBeforeToday<daysLeft?'optional':neededBeforeToday===daysLeft?'required':'behind';
+ return {...result,kind,daysLeft,shortfall:c.frequency.type==='weekly'?Math.max(0,neededBeforeToday-daysLeft):0,actionable:done||c.frequency.type!=='weekly'||week.done<week.target};
+}
+export function dayPlanSummary(s,cycles=s.cycles,date=today()){
+ const summary={required:0,completedRequired:0,optional:0,behind:0,completed:0};
+ for(const c of cycles){
+  const plan=todayPlan(s,c,date);
+  if(c.status!=='active'||date<c.startDate||date>c.endDate)continue;
+  if(plan.done)summary.completed++;
+  if(plan.kind==='required'){summary.required++;if(plan.done)summary.completedRequired++}
+  if(plan.kind==='optional'&&!plan.done)summary.optional++;
+  if(plan.kind==='behind'&&!plan.done)summary.behind++;
+ }
+ return summary;
+}
 export function canBackfill(s,c,date){
  const now=today();
  return !!c&&dateValid(date)&&date>=weekStart(now)&&date<now&&canCheckIn(s,c,date)&&!s.checkins.some(x=>x.cycleId===c.id&&x.date===date);

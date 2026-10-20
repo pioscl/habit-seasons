@@ -63,3 +63,7 @@ dialog{padding:0;border:1px solid #DFE0D4;border-radius:12px;width:calc(100% - 4
 @media(max-width:760px){.brand img{width:32px;height:32px}.nav button .app-icon{width:22px;height:22px}}
 
 .settings-danger h3{color:#935C52}.settings-danger .btn{flex-shrink:0}
+
+/* Daily intent is shown as quiet text; the circle only indicates completion. */
+.today-status{font-size:11px;line-height:1.5;color:var(--muted);white-space:nowrap}.today-status.is-required{color:var(--accent);font-weight:550}.today-status.is-behind{color:#8C7561}.today-status.is-done{color:var(--muted);font-weight:400}.habit-row-meta{display:grid;gap:8px;text-align:right;flex-shrink:0}.quick-habit-warning{display:block;margin-top:4px;color:#8C7561;font-size:10px}.habit-plan-note{font-size:11px;line-height:1.8;color:var(--muted);margin-top:15px}.habit-plan-note.is-behind{color:#8C7561}.modal-body .habit-plan-note{font-size:11px;line-height:1.8;margin:13px 0 20px}.check-btn:disabled{opacity:.4}
+@media(max-width:760px){.today-status{font-size:10px}.quick-habit-warning{font-size:10px}}

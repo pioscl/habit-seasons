@@ -6,8 +6,8 @@ export {uid,today,parseDate,dateValid};
 import {balance} from './wallet.js';
 export {balance,earnedPoints} from './wallet.js';
 import {validateGoals} from './goal-model.js';
-import {shiftDate,monthEnd,daysBetween,weekStart,scheduled,weeklyTarget,weekProgress,canCheckIn,canBackfill,expected,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints} from './habit-math.js';
-export {shiftDate,monthEnd,daysBetween,weekStart,scheduled,weeklyTarget,weekProgress,canCheckIn,canBackfill,expected,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints};
+import {shiftDate,monthEnd,daysBetween,weekStart,scheduled,weeklyTarget,weekProgress,todayPlan,dayPlanSummary,canCheckIn,canBackfill,expected,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints} from './habit-math.js';
+export {shiftDate,monthEnd,daysBetween,weekStart,scheduled,weeklyTarget,weekProgress,todayPlan,dayPlanSummary,canCheckIn,canBackfill,expected,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints};
 export function initialState(){return{schemaVersion:VERSION,revision:0,templates:[],cycles:[],checkins:[],rewards:[],redemptions:[],goals:[],lastExportAt:null}}
 const ensure=(ok,msg)=>{if(!ok)throw new Error(msg)};
 const nameValid=s=>typeof s==='string'&&s.trim().length>0&&s.length<=60;
