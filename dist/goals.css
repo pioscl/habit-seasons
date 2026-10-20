@@ -10,3 +10,6 @@
 
 /* Open record layouts follow the shared journal typography. */
 .goal-grid{column-gap:50px;row-gap:0}.goal-card{padding:27px 0!important}.goal-icon{background:none;border-radius:0;color:var(--accent);width:28px;height:30px}.goal-title{gap:11px}.goal-title h3{font-size:16px;font-weight:500}.goal-status{font-size:10px;background:transparent!important}.goal-amount strong{font-family:Georgia,serif;font-weight:400;font-size:38px;color:var(--accent)}.goal-amount>span{font-size:12px}.goal-amount>b{font-weight:400;font-size:12px}.goal-card-meta,.goal-deadline{font-size:11px}.goal-threshold{border-radius:3px}.goal-detail .goal-amount strong{font-family:Georgia,serif;font-weight:400}.goal-milestone-row{gap:12px}.goal-milestone-copy strong{font-size:13px}.goal-form-section h3,.goal-detail-section h3{font-size:14px}.goal-detail-section{margin-top:24px}.goal-amount{margin-top:24px}.goal-progress{height:3px}.goal-primary{font-size:13px}.goal-input-suffix>span{font-size:12px}.goal-icon-edit{font-size:11px}.goal-tabs{gap:28px}@media(max-width:760px){.goal-card{padding:25px 0!important}.goal-amount strong{font-size:35px}.goal-card .card-footer .btn{font-size:12px}}
+
+/* Creation stays secondary to recording progress on an existing goal. */
+.page-head>.goal-create-action{align-self:flex-end;flex-shrink:0;min-height:44px;padding:10px 0 10px 12px;white-space:nowrap}
