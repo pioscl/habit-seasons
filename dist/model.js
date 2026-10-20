@@ -40,6 +40,7 @@ export function validate(s){
  for(const c of s.cycles){
   ensure(ts.has(c.templateId)&&snapshotValid(c.snapshot)&&frequencyValid(c.frequency)&&dateValid(c.startDate)&&dateValid(c.endDate)&&c.startDate<=c.endDate&&daysBetween(c.endDate,c.startDate)<=3660,'周期日期或模板关联无效。');
   ensure(int(c.weeklyBonusPoints)&&((c.completionThreshold===null&&c.weeklyBonusPoints===0)||int(c.completionThreshold,1,100)),'周期积分或达标比例无效。');
+  ensure(c.note===undefined||(typeof c.note==='string'&&c.note.length<=200),'本期备注最多 200 字。');
   ensure(['active','completed','failed','ended'].includes(c.status),'周期状态无效。');
   if(c.status==='active'){ensure(c.endedAt===null&&!active.has(c.templateId),'同一模板存在多个进行中的周期。');active.add(c.templateId)}
   else{ensure(dateValid(c.endedAt)&&c.endedAt>=c.startDate,'周期结束日期无效。');if(['completed','failed'].includes(c.status))ensure(c.endedAt>=c.endDate,'尚未到期的周期不能结算。')}
@@ -59,9 +60,10 @@ export function startCycle(s,templateId,startDate,endDate,frequency={type:'daily
  ensure(dateValid(startDate)&&dateValid(endDate)&&startDate>=today()&&endDate>=startDate&&daysBetween(endDate,startDate)<=3660,'请选择有效的开始和结束日期（最长 10 年）。');
  ensure(frequencyValid(frequency),'请选择有效的执行频率。');
  ensure(rules&&typeof rules==='object','本期规则无效。');
- const {points=t.points,weeklyBonusPoints=0,completionThreshold=90}=rules;
+ const {points=t.points,weeklyBonusPoints=0,completionThreshold=90,note=''}=rules;
  ensure(int(points,1,1000)&&int(weeklyBonusPoints)&&int(completionThreshold,1,100),'单次积分需为 1–1,000，周奖励为 0–1,000,000，达标比例为 1–100 的整数。');
- const c={id:uid(),templateId,frequency:structuredClone(frequency),snapshot:{name:t.name,icon:t.icon,difficulty:t.difficulty,points},weeklyBonusPoints,completionThreshold,startDate,endDate,status:'active',endedAt:null};
+ ensure(typeof note==='string'&&note.trim().length<=200,'本期备注最多 200 字。');
+ const c={id:uid(),templateId,frequency:structuredClone(frequency),snapshot:{name:t.name,icon:t.icon,difficulty:t.difficulty,points},note:note.trim(),weeklyBonusPoints,completionThreshold,startDate,endDate,status:'active',endedAt:null};
  ensure(expected(c)>0,'这段时间没有安排执行日，请延长周期。');s.cycles.push(c);return c;
 }
 function recordCheckIn(s,cycleId,date){
