@@ -1,9 +1,10 @@
 import {dateValid,parseDate,today} from './core.js';
+import {renderIcon} from './icons.js';
 
 const weekdays=['一','二','三','四','五','六','日'];
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const calendarIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16m-12 4h2m4 0h2m-8 3h2"/></svg>';
-const chevron=direction=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${direction<0?'m14 6-6 6 6 6':'m10 6 6 6-6 6'}"/></svg>`;
+const calendarIcon=renderIcon('calendar');
+const chevron=direction=>renderIcon(direction<0?'chevron-left':'chevron-right');
 const iso=date=>`${String(date.getFullYear()).padStart(4,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const monthDate=(year,month,day=1)=>{const d=new Date(0);d.setFullYear(year,month,day);d.setHours(12,0,0,0);return d};
 const monthEnd=(year,month)=>iso(monthDate(year,month+1,0));
