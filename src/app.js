@@ -1,6 +1,7 @@
 import {LOCAL_DATA_KEY,HABIT_VIEW_KEY,clearStoredData} from './local-data.js';
 import {dateField,initDatePickers,syncDateFields,closeDatePicker,validateDateFields} from './date-picker.js';
 import {createGoalUI} from './goal-ui.js';
+import {quickHabitCycles} from './today-view.js';
 import {HABIT_ICON_GROUPS} from './habit-icons.js';
 import {renderIcon} from './icons.js';
 import {HABIT_ICONS,upgrade,canBackfill,backfillCheckIn,weekStart,canCheckIn,weekProgress,todayPlan,dayPlanSummary,today,parseDate,shiftDate,monthEnd,daysBetween,expected,scheduled,balance,earnedPoints,initialState,validate,uid,startCycle,checkIn,undoCheckIn,finishCycle,redeem,rewardAvailable,rewardRedeemed,saveReward,archiveReward,deleteReward,dateValid,frequencyValid,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints} from './model.js';
@@ -37,6 +38,13 @@ function head(title,sub,action=''){
 
 function home(){
  const active=state.cycles.filter(c=>c.status==='active');
+ const quick=quickHabitCycles(state),hidden=active.length-quick.length,shown=habitView==='quick'?quick.length:active.length;
+ const showDetails=`<button type="button" class="text-btn quick-completed-link" data-action="habit-view" data-id="detail">查看详细 ${icon('arrow')}</button>`;
+ let habitContent;
+ if(!active.length)habitContent=empty('从一个小习惯开始','创建一个习惯，设定这一期的时间。<br>你的第一笔记录，就从这里开始。',pageButton('templates','创建我的习惯'));
+ else if(habitView==='detail')habitContent=active.map(cycleCard).join('');
+ else if(quick.length)habitContent=`<ul class="quick-habit-list" aria-label="快速打卡列表">${quick.map(quickCycleRow).join('')}</ul>${hidden?`<div class="quick-completed-note"><span>本周已完成 ${hidden} 项</span>${showDetails}</div>`:''}`;
+ else habitContent=empty('本周的习惯已完成',`本周 ${hidden} 项习惯均已完成。<br>可在详细视图查看记录或撤销今天的打卡。`,showDetails);
  const summary=dayPlanSummary(state,active),summaryParts=[];
  if(summary.required)summaryParts.push(`必打已完成 ${summary.completedRequired}/${summary.required}`);
  if(summary.optional)summaryParts.push(`可选 ${summary.optional} 项`);
@@ -45,7 +53,7 @@ function home(){
  const monday=weekStart(today()),weekDates=Array.from({length:7},(_,i)=>shiftDate(monday,i));
  const weekChecks=state.checkins.filter(x=>weekDates.includes(x.date));
  return `${head('今日',new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'}).format(parseDate(today())),`<button class="text-btn page-action" data-page="templates">${icon('plus')} 开始新一期</button>`)}
- <div class="content-grid"><section class="habits-section"><div class="section-head habit-section-head"><div class="habit-section-title"><h2>今天的习惯 <span>${active.length?`· ${active.length}`:''}</span></h2><span>${summaryText}</span></div>${active.length?habitViewSwitch():''}</div>${active.length?(habitView==='quick'?`<ul class="quick-habit-list" aria-label="快速打卡列表">${active.map(quickCycleRow).join('')}</ul>`:active.map(cycleCard).join('')):empty('从一个小习惯开始','创建一个习惯，设定这一期的时间。<br>你的第一笔记录，就从这里开始。',pageButton('templates','创建我的习惯'))}</section>
+ <div class="content-grid"><section class="habits-section"><div class="section-head habit-section-head"><div class="habit-section-title"><h2>今天的习惯 <span>${active.length?`· ${shown}`:''}</span></h2><span>${summaryText}</span></div>${active.length?habitViewSwitch():''}</div>${habitContent}</section>
  <aside class="week-aside"><div class="section-head"><h2>这一周</h2><span>${+monday.slice(5,7)}.${+monday.slice(-2)} — ${+weekDates[6].slice(5,7)}.${+weekDates[6].slice(-2)}</span></div><div class="week-strip">${weekDates.map((d,i)=>`<div class="week-day ${d===today()?'is-today':''}" aria-label="${d}，${weekChecks.filter(x=>x.date===d).length} 次记录"><span>${['一','二','三','四','五','六','日'][i]}</span><b>${+d.slice(-2)}</b><i class="${weekChecks.some(x=>x.date===d)?'has-record':''}"></i></div>`).join('')}</div><div class="week-total"><strong>${weekChecks.length.toString().padStart(2,'0')}</strong><span>次记录<br>留在这一周</span></div><div class="aside-links"><button data-page="history">回看以往的周期 ${icon('arrow')}</button><button data-page="gift">查看我的积分与奖励 ${icon('arrow')}</button></div></aside></div>
  <div class="journal-footer"><p>微小的重复，也会留下痕迹。</p><span>HABIT SEASONS</span></div>`;
 }
