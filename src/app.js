@@ -1,7 +1,7 @@
 import {LOCAL_DATA_KEY,HABIT_VIEW_KEY,clearStoredData} from './local-data.js';
 import {dateField,initDatePickers,syncDateFields,closeDatePicker,validateDateFields} from './date-picker.js';
 import {createGoalUI} from './goal-ui.js';
-import {quickHabitCycles} from './today-view.js';
+import {quickHabitCycles,sundayBackfillSummary} from './today-view.js';
 import {HABIT_ICON_GROUPS} from './habit-icons.js';
 import {renderIcon} from './icons.js';
 import {HABIT_ICONS,upgrade,canBackfill,backfillCheckIn,weekStart,canCheckIn,weekProgress,todayPlan,dayPlanSummary,today,parseDate,shiftDate,monthEnd,daysBetween,expected,scheduled,balance,earnedPoints,initialState,validate,uid,startCycle,checkIn,undoCheckIn,finishCycle,redeem,rewardAvailable,rewardRedeemed,saveReward,archiveReward,deleteReward,dateValid,frequencyValid,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints} from './model.js';
@@ -53,9 +53,20 @@ function home(){
  const monday=weekStart(today()),weekDates=Array.from({length:7},(_,i)=>shiftDate(monday,i));
  const weekChecks=state.checkins.filter(x=>weekDates.includes(x.date));
  return `${head('今日',new Intl.DateTimeFormat('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'}).format(parseDate(today())),`<button class="text-btn page-action" data-page="templates">${icon('plus')} 开始新一期</button>`)}
+ ${sundayReview()}
  <div class="content-grid"><section class="habits-section"><div class="section-head habit-section-head"><div class="habit-section-title"><h2>今天的习惯 <span>${active.length?`· ${shown}`:''}</span></h2><span>${summaryText}</span></div>${active.length?habitViewSwitch():''}</div>${habitContent}</section>
  <aside class="week-aside"><div class="section-head"><h2>这一周</h2><span>${+monday.slice(5,7)}.${+monday.slice(-2)} — ${+weekDates[6].slice(5,7)}.${+weekDates[6].slice(-2)}</span></div><div class="week-strip">${weekDates.map((d,i)=>`<div class="week-day ${d===today()?'is-today':''}" aria-label="${d}，${weekChecks.filter(x=>x.date===d).length} 次记录"><span>${['一','二','三','四','五','六','日'][i]}</span><b>${+d.slice(-2)}</b><i class="${weekChecks.some(x=>x.date===d)?'has-record':''}"></i></div>`).join('')}</div><div class="week-total"><strong>${weekChecks.length.toString().padStart(2,'0')}</strong><span>次记录<br>留在这一周</span></div><div class="aside-links"><button data-page="history">回看以往的周期 ${icon('arrow')}</button><button data-page="gift">查看我的积分与奖励 ${icon('arrow')}</button></div></aside></div>
  <div class="journal-footer"><p>微小的重复，也会留下痕迹。</p><span>HABIT SEASONS</span></div>`;
+}
+
+function sundayReview(){
+ const review=sundayBackfillSummary(state);
+ if(!review||!state.cycles.some(c=>c.status==='active'))return '';
+ const items=review.items.map(item=>{
+  const c=state.cycles.find(c=>c.id===item.cycleId),dates=c.frequency.type==='weekly'?`${schedule(c)} · 日期可选`:item.dates.map(date=>`周${['日','一','二','三','四','五','六'][parseDate(date).getDay()]}`).join(' · ');
+  return `<li><button type="button" class="sunday-review-item" data-action="review-backfill" data-id="${c.id}" aria-label="${esc(c.snapshot.name)}，${item.count} 次待补，查看本周补卡"><span class="sunday-review-copy"><strong>${esc(c.snapshot.name)}</strong><small>${dates}</small></span><span class="sunday-review-action">${item.count} 次待补 ${icon('arrow')}</span></button></li>`;
+ }).join('');
+ return `<section class="sunday-review" aria-labelledby="sunday-review-title"><div class="sunday-review-heading"><h2 id="sunday-review-title">周日补卡提醒</h2><p><strong>${review.items.length}</strong> 项习惯 · <strong>${review.total}</strong> 次待补</p></div><p class="sunday-review-note">${review.total?'只统计周一至周六，今天的任务单独计算。':'周一至周六暂无需要补记的记录。'}</p>${items?`<ul class="sunday-review-list">${items}</ul>`:''}</section>`;
 }
 
 function habitViewSwitch(){return `<div class="habit-view-switch" role="group" aria-label="习惯显示方式">${[['detail','详细'],['quick','快速']].map(([value,label])=>`<button data-action="habit-view" data-id="${value}" aria-pressed="${habitView===value}">${label}</button>`).join('')}</div>`}
@@ -175,6 +186,12 @@ function backfillCalendar(c){
  }).join('');
  return `<section class="backfill-section" aria-label="本周补打卡"><h3>本周补打卡</h3><p>仅限本周一至昨天；补卡获得相同积分。</p><div class="backfill-week">${days}</div><p class="backfill-note">${c.frequency.type==='weekly'&&weekProgress(state,c).target>0&&weekProgress(state,c).done>=weekProgress(state,c).target?'本周目标已完成，无需补卡。':Array.from({length:7},(_,i)=>shiftDate(monday,i)).some(date=>canBackfill(state,c,date))?'点击可补卡的日期。今天请在首页打卡。':'本周暂无可补卡的日期。今天请在首页打卡。'}</p></section>`;
 }
+function reviewBackfill(id){
+ detail(id);
+ const section=dialog.querySelector('.backfill-section');
+ section?.scrollIntoView({block:'start'});
+ section?.querySelector('.backfill-day:not(:disabled)')?.focus({preventScroll:true});
+}
 function detail(id){
  const c=state.cycles.find(c=>c.id===id),logs=state.checkins.filter(x=>x.cycleId===id).sort((a,b)=>a.date.localeCompare(b.date)),start=shiftDate(today(),-27),until=c.status==='active'?today():c.endedAt,elapsed=expected(c,until),isActive=c.status==='active',activity=cycleToday(c),planNote=todayExplanation(c,activity);
  modal('习惯记录',`<div class="record-heading"><span class="kicker">HABIT / ${String(cycleNum(c)).padStart(2,'0')}</span><h3>${esc(c.snapshot.name)}</h3>${cycleNote(c)}<p>${schedule(c)} · ${difficulty[c.snapshot.difficulty]}<span class="record-reward">+${c.snapshot.points} pts / 次</span></p></div><section class="record-section"><div class="record-section-head"><h3>当前周期</h3><span class="meta">${cycleStatus(c)}</span></div><p>${fmt(c.startDate)} — ${fmt(c.endDate)}${c.endedAt?`<br>实际结束 ${fmt(c.endedAt)}`:''}</p><div class="detail-stats"><div>完成记录<strong>${logs.length} <small>/ ${expected(c)}</small></strong></div><div>计划完成率<strong>${rate(c)}<small>%</small></strong></div><div>本期积分<strong>${cyclePoints(state,c)}<small>pts</small></strong></div></div><div class="progress" role="progressbar" aria-label="计划完成率" aria-valuenow="${rate(c)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${rate(c)}%"></i></div><p class="record-context">截至${c.frequency.type==='weekly'?(isActive?'本周':'结束所在周'):(isActive?'今天':'结束')}计划 ${elapsed} 次，已完成 ${logs.length} 次。</p>${cycleRuleDetails(c)}</section>${isActive?`<button class="btn full record-check" data-action="${activity.done?'record-undo':'record-check'}" data-id="${c.id}" ${activity.due?'':'disabled'}>${activity.done?icon('check'):icon('plus')}${activity.done?'今日已完成 · 撤销打卡':activity.due?`${activity.status} · 打卡 +${c.snapshot.points} pts`:activity.status}</button>${planNote?`<p class="habit-plan-note ${activity.kind==='behind'?'is-behind':''}">${planNote}</p>`:''}${backfillCalendar(c)}`:''}<section class="record-section"><div class="record-section-head"><h3>最近 28 天</h3><span class="meta">${logs.filter(x=>x.date>=start&&x.date<=today()).length} 次记录</span></div><div class="calendar">${Array.from({length:28},(_,i)=>{const d=shiftDate(start,i),hit=logs.some(x=>x.date===d);return `<span class="${hit?'hit':!scheduled(c,d)?'na':''}" title="${d} · ${hit?'已完成':scheduled(c,d)?'未打卡':'非执行日'}">${+d.slice(-2)}</span>`}).join('')}</div><p class="form-note">苔藓绿表示已完成。</p>${logs.length?`<details><summary>全部 ${logs.length} 次记录</summary><div class="record-logs">${[...logs].reverse().map(x=>`<div class="row sub"><span>${fmt(x.date)}</span><span>+${x.points} pts</span></div>`).join('')}</div></details>`:''}</section>${finishControls(c)}`);dialog.classList.add('habit-record');
@@ -199,6 +216,7 @@ let pendingImport=null;
 const goalUI=createGoalUI({getState:()=>state,commit,modal,close,toast,esc,icon,iconPicker,head,render,navigate:()=>{page='goals'},confirm});
 const actions={
  'clear-data':clearDataConfirmation,'confirm-clear-data':clearLocalData,
+ 'review-backfill':reviewBackfill,
  'record-check':id=>{const points=commit(s=>checkIn(s,id));detail(id);toast(`今日已完成，+${points} pts`)},
  'record-undo':id=>actions.undo(id),
  'habit-view':view=>{if(!['detail','quick'].includes(view))return;habitView=view;try{localStorage.setItem(VIEW_KEY,view)}catch{}render();document.querySelector('.habit-view-switch [aria-pressed="true"]')?.focus({preventScroll:true})},

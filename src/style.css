@@ -78,3 +78,21 @@ dialog{padding:0;border:1px solid #DFE0D4;border-radius:12px;width:calc(100% - 4
 /* Weekly completion is tucked away in quick view, with a path back to records. */
 .quick-completed-note{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;color:var(--muted);font-size:11px}
 .quick-completed-link{min-height:44px;flex-shrink:0}
+
+/* Sunday review uses open rows and quiet totals rather than another summary card. */
+.sunday-review{margin:0 0 28px;padding:0 0 22px;border-bottom:1px solid var(--divider)}
+.sunday-review-heading{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px 16px}
+.sunday-review-heading h2{font-size:16px;font-weight:500}
+.sunday-review-heading p{margin:0;color:var(--muted);font-size:11px}
+.sunday-review-heading strong{font-family:Georgia,serif;font-size:20px;font-weight:400;color:var(--accent)}
+.sunday-review-note{margin:7px 0 4px;color:var(--muted);font-size:11px;line-height:1.8}
+.sunday-review-list{list-style:none;padding:0;margin:0}
+.sunday-review-list li+li{border-top:1px solid var(--divider)}
+.sunday-review-item{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px;width:100%;padding:11px 0;text-align:left}
+.sunday-review-copy{min-width:0}
+.sunday-review-copy strong{display:block;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.sunday-review-copy small{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.6}
+.sunday-review-action{display:flex;align-items:center;gap:7px;flex-shrink:0;color:var(--accent);font-size:11px;white-space:nowrap}
+.sunday-review-action svg{width:14px;height:14px}
+.backfill-section{scroll-margin-block-start:80px}
+@media(hover:hover){.sunday-review-item:hover strong{color:var(--accent)}}
