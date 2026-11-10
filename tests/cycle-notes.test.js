@@ -35,10 +35,10 @@ test('invalid notes are rejected before any cycle or template is changed',()=>{
  }
 });
 
-test('old v4 backups without notes remain valid without an implicit migration',()=>{
- const s=populatedState(),c=startCycle(s,s.templates[0].id,today(),today());delete c.note;
+test('old v4 backups without notes preserve cycles when upgraded',()=>{
+ const s=populatedState(),c=startCycle(s,s.templates[0].id,today(),today());delete c.note;s.schemaVersion=4;delete s.activities;delete s.activityEvents;
  const before=structuredClone(s),restored=upgrade(s);
- assert.equal(restored.schemaVersion,4);assert.deepEqual(restored,before);assert.deepEqual(s,before);validate(restored);
+ assert.equal(restored.schemaVersion,5);assert.deepEqual(restored,{...before,schemaVersion:5,activities:[],activityEvents:[]});assert.deepEqual(s,before);validate(restored);
 });
 
 test('notes survive backup export and import while invalid backup notes are rejected',()=>{

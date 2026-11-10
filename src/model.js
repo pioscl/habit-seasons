@@ -1,14 +1,15 @@
-export const VERSION=4;
+export const VERSION=5;
 import {HABIT_ICONS} from './habit-icons.js';
 export {HABIT_ICONS};
 import {uid,today,parseDate,dateValid} from './core.js';
 export {uid,today,parseDate,dateValid};
 import {balance} from './wallet.js';
 export {balance,earnedPoints} from './wallet.js';
+import {validateActivities} from './activity-model.js';
 import {validateGoals} from './goal-model.js';
 import {shiftDate,monthEnd,daysBetween,weekStart,scheduled,weeklyTarget,weekProgress,todayPlan,dayPlanSummary,canCheckIn,canBackfill,expected,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints} from './habit-math.js';
 export {shiftDate,monthEnd,daysBetween,weekStart,scheduled,weeklyTarget,weekProgress,todayPlan,dayPlanSummary,canCheckIn,canBackfill,expected,requiredCheckins,cycleOutcome,checkInReward,undoCheckInCost,weeklyAwards,cyclePoints};
-export function initialState(){return{schemaVersion:VERSION,revision:0,templates:[],cycles:[],checkins:[],rewards:[],redemptions:[],goals:[],lastExportAt:null}}
+export function initialState(){return{schemaVersion:VERSION,revision:0,templates:[],cycles:[],checkins:[],rewards:[],redemptions:[],goals:[],activities:[],activityEvents:[],lastExportAt:null}}
 const ensure=(ok,msg)=>{if(!ok)throw new Error(msg)};
 const nameValid=s=>typeof s==='string'&&s.trim().length>0&&s.length<=60;
 const int=(v,min=0,max=1000000)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
@@ -27,8 +28,9 @@ export function upgrade(input){
  if(s?.schemaVersion===3){
   ensure(Array.isArray(s.cycles),'旧版周期无效。');
   for(const c of s.cycles){ensure(c&&typeof c==='object','旧版周期无效。');c.weeklyBonusPoints=0;c.completionThreshold=null;}
-  s.schemaVersion=VERSION;
+  s.schemaVersion=4;
  }
+ if(s?.schemaVersion===4){s.activities=[];s.activityEvents=[];s.schemaVersion=5;}
  return validate(s);
 }
 export function validate(s){
@@ -51,6 +53,7 @@ export function validate(s){
  const rs=new Set();for(const r of s.rewards){ensure(nameValid(r.name)&&int(r.cost,1)&&typeof r.archived==='boolean','奖励设置无效。');rs.add(r.id)}
  for(const r of s.redemptions)ensure(rs.has(r.rewardId)&&nameValid(r.name)&&int(r.cost,1)&&typeof r.redeemedAt==='string'&&Number.isFinite(Date.parse(r.redeemedAt)),'兑换记录无效。');
  validateGoals(s);
+ validateActivities(s);
  ensure(Number.isSafeInteger(balance(s))&&balance(s)>=0,'备份中的积分余额不能为负数。');
  ensure(s.lastExportAt===null||(typeof s.lastExportAt==='string'&&Number.isFinite(Date.parse(s.lastExportAt))),'备份时间无效。');return s;
 }

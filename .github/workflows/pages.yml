@@ -34,6 +34,8 @@ jobs:
         run: npm ci
       - name: Verify core behavior
         run: npm test
+      - name: Verify UI interactions
+        run: npm run test:ui
       - name: Build static app
         run: npm run build
       - name: Verify offline build
