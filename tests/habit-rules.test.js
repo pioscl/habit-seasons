@@ -96,7 +96,7 @@ test('v3 migration keeps legacy cycles, statuses and wallet unchanged without re
  const oldZero=startCycle(s,s.templates[2].id,day,day);oldZero.status='completed';oldZero.endedAt=day;
  s.schemaVersion=3;for(const cycle of s.cycles){delete cycle.completionThreshold;delete cycle.weeklyBonusPoints;}
  const before=structuredClone(s),next=upgrade(s);
- assert.deepEqual(s,before);assert.equal(balance(next),10);assert.equal(next.schemaVersion,4);
+ assert.deepEqual(s,before);assert.equal(balance(next),10);assert.equal(next.schemaVersion,5);
  assert.deepEqual(next.cycles.map(x=>x.status),['completed','active','completed']);
  for(const cycle of next.cycles){assert.equal(cycle.weeklyBonusPoints,0);assert.equal(cycle.completionThreshold,null)}
  assert.equal(requiredCheckins(next.cycles[1]),null);assert.equal(checkIn(next,oldActive.id),20);
