@@ -1,9 +1,18 @@
-import {today} from './core.js';
+import {today,dateValid} from './core.js';
 import {shiftDate,weekStart,weeklyTarget,scheduled} from './habit-math.js';
 
-// Four Monday–Sunday weeks ending with the current week, including future days.
-export function cycleCalendarWeeks(state,cycle,date=today()){
- const currentWeek=weekStart(date),first=shiftDate(currentWeek,-21);
+export function cycleCalendarNavigation(cycle,date=today(),requestedWeek=null){
+ const currentWeek=weekStart(date),firstCycleWeek=weekStart(cycle.startDate);
+ const firstFullWindow=shiftDate(firstCycleWeek,21);
+ const earliestWeek=firstFullWindow<currentWeek?firstFullWindow:currentWeek;
+ const requested=dateValid(requestedWeek)?weekStart(requestedWeek):currentWeek;
+ const endWeek=requested<earliestWeek?earliestWeek:requested>currentWeek?currentWeek:requested;
+ return {endWeek,currentWeek,firstWeek:shiftDate(endWeek,-21),isCurrent:endWeek===currentWeek,previousWeek:endWeek>earliestWeek?shiftDate(endWeek,-7):null,nextWeek:endWeek<currentWeek?shiftDate(endWeek,7):null};
+}
+
+// Four Monday–Sunday rows; browsing changes the window, never the actual date.
+export function cycleCalendarWeeks(state,cycle,date=today(),requestedWeek=null){
+ const currentWeek=weekStart(date),{firstWeek:first}=cycleCalendarNavigation(cycle,date,requestedWeek);
  const recorded=new Set(state.checkins.filter(event=>event.cycleId===cycle.id).map(event=>event.date));
  return Array.from({length:4},(_,index)=>{
   const startDate=shiftDate(first,index*7),endDate=shiftDate(startDate,6);
@@ -16,14 +25,21 @@ export function cycleCalendarWeeks(state,cycle,date=today()){
  });
 }
 
-export function renderCycleCalendar(state,cycle,date=today()){
- const weeks=cycleCalendarWeeks(state,cycle,date),count=weeks.reduce((sum,week)=>sum+week.done,0);
+export function renderCycleCalendar(state,cycle,date=today(),requestedWeek=null){
+ const navigation=cycleCalendarNavigation(cycle,date,requestedWeek);
+ const weeks=cycleCalendarWeeks(state,cycle,date,navigation.endWeek),count=weeks.reduce((sum,week)=>sum+week.done,0);
  const shortDate=value=>`${+value.slice(5,7)}.${+value.slice(-2)}`;
  const dayStatus=day=>day.done?'已打卡':!day.scheduled?'非执行日':day.future?'未到':day.today?'今天 · 未打卡':'未打卡';
  return `<section class="record-section cycle-calendar-section" aria-labelledby="cycle-calendar-title">
- <div class="record-section-head"><h3 id="cycle-calendar-title">最近 4 周</h3><span class="meta">${count} 次记录</span></div>
- <p class="cycle-calendar-note">本周及前三周 · 周一至周日</p>
- <div class="cycle-calendar" role="group" aria-label="最近4周打卡记录">
+ <div class="record-section-head"><h3 id="cycle-calendar-title">${navigation.isCurrent?'最近 4 周':'4 周记录'}</h3><span class="meta">${count} 次记录</span></div>
+ <p class="cycle-calendar-note">${navigation.isCurrent?'本周及前三周':'历史记录'} · 周一至周日</p>
+ <div class="cycle-calendar-nav" role="group" aria-label="日历周导航">
+ <button type="button" data-action="cycle-calendar-previous" data-id="${cycle.id}" ${navigation.previousWeek?'':'disabled'}>上一周</button>
+ <button type="button" data-action="cycle-calendar-current" data-id="${cycle.id}" ${navigation.isCurrent?'disabled':''}>回到本周</button>
+ <button type="button" data-action="cycle-calendar-next" data-id="${cycle.id}" ${navigation.nextWeek?'':'disabled'}>下一周</button>
+ </div>
+ <p class="cycle-calendar-range" tabindex="-1" aria-live="polite" aria-atomic="true">${navigation.firstWeek.replaceAll('-','.')} — ${weeks.at(-1).endDate.replaceAll('-','.')}</p>
+ <div class="cycle-calendar" role="group" aria-label="四周打卡记录">
  <div class="cycle-calendar-weekdays" aria-hidden="true">${['一','二','三','四','五','六','日'].map(day=>`<span>${day}</span>`).join('')}</div>
  ${weeks.map(week=>`<div class="cycle-calendar-week ${week.completed?'is-complete':''} ${week.current?'is-current':''}" role="group" aria-label="${week.startDate} 至 ${week.endDate}${week.completed?'，已达标':''}${week.current?'，本周':''}">
  <div class="cycle-calendar-week-label"><span>${shortDate(week.startDate)} — ${shortDate(week.endDate)}</span><span>${week.current?'本周 · ':week.completed?'已达标 · ':''}${week.target?`${week.done} / ${week.target}`:'无安排'}</span></div>

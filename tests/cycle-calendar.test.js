@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cycleCalendarWeeks} from '../src/cycle-calendar.js';
+import {cycleCalendarWeeks,cycleCalendarNavigation} from '../src/cycle-calendar.js';
 
 const cycle=(overrides={})=>({id:'focus',startDate:'2026-10-01',endDate:'2027-02-28',frequency:{type:'weekly',times:3},...overrides});
 const state=(dates=[],otherDates=[])=>({checkins:[...dates.map(date=>({cycleId:'focus',date})),...otherDates.map(date=>({cycleId:'other',date}))]});
@@ -55,4 +55,35 @@ test('only this cycle and visible dates affect counts; reading the calendar neve
  const s=state(['2026-11-01','2026-11-18'],['2026-11-16','2026-11-17','2026-11-19']);
  const before=structuredClone(s),weeks=cycleCalendarWeeks(s,cycle(),'2026-11-25');
  assert.equal(weeks.reduce((sum,week)=>sum+week.done,0),1);assert.equal(weeks[2].completed,false);assert.deepEqual(s,before);
+});
+
+test('navigation moves one week at a time and stops at the current week',()=>{
+ const initial=cycleCalendarNavigation(cycle(),'2026-11-25');
+ assert.equal(initial.endWeek,'2026-11-23');assert.equal(initial.previousWeek,'2026-11-16');assert.equal(initial.nextWeek,null);assert.equal(initial.isCurrent,true);
+ const previous=cycleCalendarNavigation(cycle(),'2026-11-25',initial.previousWeek);
+ assert.equal(previous.firstWeek,'2026-10-26');assert.equal(previous.nextWeek,'2026-11-23');assert.equal(previous.isCurrent,false);
+ assert.equal(cycleCalendarNavigation(cycle(),'2026-11-25','2027-01-04').endWeek,'2026-11-23');
+});
+test('the earliest four-week page includes the first cycle week without leading empty pages',()=>{
+ const c=cycle({startDate:'2026-11-01'}),nav=cycleCalendarNavigation(c,'2026-11-25','2026-10-01');
+ assert.equal(nav.firstWeek,'2026-10-26');assert.equal(nav.endWeek,'2026-11-16');assert.equal(nav.previousWeek,null);assert.equal(nav.nextWeek,'2026-11-23');
+ assert.equal(cycleCalendarNavigation(c,'2026-11-25','2026-11-18').endWeek,'2026-11-16');
+});
+test('short and future cycles cannot navigate into earlier empty pages',()=>{
+ for(const startDate of ['2026-11-10','2026-11-25','2026-12-07']){
+  const nav=cycleCalendarNavigation(cycle({startDate}),'2026-11-25','2026-01-05');
+  assert.equal(nav.endWeek,'2026-11-23');assert.equal(nav.previousWeek,null);assert.equal(nav.nextWeek,null);
+ }
+});
+test('historical paging preserves the actual present date and highlights the last visible past week',()=>{
+ const s=state(['2026-11-16','2026-11-18','2026-11-22','2026-11-25']);
+ const before=structuredClone(s),weeks=cycleCalendarWeeks(s,cycle(),'2026-11-25','2026-11-16');
+ assert.equal(weeks.at(-1).endDate,'2026-11-22');assert.equal(weeks.at(-1).completed,true);
+ assert.equal(weeks.reduce((sum,week)=>sum+week.done,0),3);
+ assert.ok(weeks.every(week=>!week.current&&week.days.every(day=>!day.future&&!day.today)));assert.deepEqual(s,before);
+});
+test('navigation handles a year boundary and resets malformed view dates to the current week',()=>{
+ const nav=cycleCalendarNavigation(cycle(),'2027-01-01','2026-12-21');
+ assert.equal(nav.firstWeek,'2026-11-30');assert.equal(nav.nextWeek,'2026-12-28');
+ for(const invalid of ['2026-02-30','invalid','',null])assert.equal(cycleCalendarNavigation(cycle(),'2027-01-01',invalid).endWeek,'2026-12-28');
 });

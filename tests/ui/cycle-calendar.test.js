@@ -46,6 +46,39 @@ test('cycle details show four aligned weeks, earned history highlighting and the
  assert.equal(document.querySelectorAll('.record-logs>.row').length,7);
  assert.equal(localStorage.getItem(LOCAL_DATA_KEY),before);
 
+ const button=name=>document.querySelector(`[data-action="cycle-calendar-${name}"]`);
+ const range=()=>document.querySelector('.cycle-calendar-range').textContent;
+ assert.equal(button('next').disabled,true);assert.equal(button('current').disabled,true);assert.equal(button('previous').disabled,false);
+ document.querySelector('#dialog').scrollTop=37;button('previous').click();
+ assert.equal(document.querySelector('#cycle-calendar-title').textContent,'4 周记录');
+ assert.equal(range(),'2026.10.26 — 2026.11.22');assert.equal(document.querySelector('.cycle-calendar-section .meta').textContent,'4 次记录');
+ assert.equal(document.querySelectorAll('.cycle-calendar-day.hit').length,4);assert.equal(document.querySelectorAll('.cycle-calendar-week.is-complete').length,2);
+ assert.equal(button('previous').disabled,true);assert.equal(button('next').disabled,false);assert.equal(button('current').disabled,false);
+ assert.equal(document.querySelector('#dialog').scrollTop,37);assert.equal(document.activeElement.className,'cycle-calendar-range');
+ button('previous').click();assert.equal(range(),'2026.10.26 — 2026.11.22');
+ button('next').click();assert.equal(range(),'2026.11.02 — 2026.11.29');assert.equal(button('next').disabled,true);
+ button('previous').click();button('current').click();assert.equal(range(),'2026.11.02 — 2026.11.29');
+ button('previous').click();document.querySelector('#dialog [data-action="close"]').click();
+ document.querySelector(`[data-action="detail"][data-id="${c.id}"]`).click();
+ assert.equal(range(),'2026.11.02 — 2026.11.29');assert.equal(localStorage.getItem(LOCAL_DATA_KEY),before);
+
+ // Recording today while browsing history retains the viewed range.
+ const withoutToday=structuredClone(s);withoutToday.checkins=withoutToday.checkins.filter(event=>event.date!=='2026-11-25');withoutToday.revision++;
+ let changed=JSON.stringify(withoutToday);localStorage.setItem(LOCAL_DATA_KEY,changed);
+ window.dispatchEvent(new window.StorageEvent('storage',{key:LOCAL_DATA_KEY,newValue:changed}));
+ document.querySelector(`[data-action="detail"][data-id="${c.id}"]`).click();button('previous').click();
+ document.querySelector('[data-action="record-check"]').click();
+ assert.equal(range(),'2026.10.26 — 2026.11.22');assert.equal(JSON.parse(localStorage.getItem(LOCAL_DATA_KEY)).checkins.length,7);
+
+ // The extra confirmation for backfill must retain the same historical page too.
+ const withoutYesterday=structuredClone(s);withoutYesterday.checkins=withoutYesterday.checkins.filter(event=>event.date!=='2026-11-24');withoutYesterday.revision+=2;
+ changed=JSON.stringify(withoutYesterday);localStorage.setItem(LOCAL_DATA_KEY,changed);
+ window.dispatchEvent(new window.StorageEvent('storage',{key:LOCAL_DATA_KEY,newValue:changed}));
+ document.querySelector(`[data-action="detail"][data-id="${c.id}"]`).click();button('previous').click();
+ document.querySelector(`[data-action="backfill"][data-id="${c.id}/2026-11-24"]`).click();
+ document.querySelector('[data-action="confirm-backfill"]').click();
+ assert.equal(range(),'2026.10.26 — 2026.11.22');assert.equal(JSON.parse(localStorage.getItem(LOCAL_DATA_KEY)).checkins.length,7);
+
  // Viewing the same period from history uses the same range and does not add editable day controls.
  finishCycle(s,c.id,'ended');s.revision++;
  const raw=JSON.stringify(s);localStorage.setItem(LOCAL_DATA_KEY,raw);
@@ -55,5 +88,7 @@ test('cycle details show four aligned weeks, earned history highlighting and the
  assert.equal(document.querySelectorAll('.cycle-calendar-week').length,4);
  assert.equal(document.querySelectorAll('.cycle-calendar-week.is-complete').length,1);
  assert.equal(document.querySelectorAll('.cycle-calendar button').length,0);
+ button('previous').click();assert.equal(range(),'2026.10.26 — 2026.11.22');
+ button('current').click();assert.equal(range(),'2026.11.02 — 2026.11.29');
  assert.equal(localStorage.getItem(LOCAL_DATA_KEY),raw);
 });
