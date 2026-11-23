@@ -1,7 +1,7 @@
 import {LOCAL_DATA_KEY,HABIT_VIEW_KEY,clearStoredData} from './local-data.js';
 import {dateField,initDatePickers,syncDateFields,closeDatePicker,validateDateFields} from './date-picker.js';
 import {createGoalUI} from './goal-ui.js';
-import {renderCycleCalendar} from './cycle-calendar.js';
+import {renderCycleCalendar,cycleCalendarNavigation} from './cycle-calendar.js';
 import {deleteCycle,deleteTemplate,habitDeletionImpact} from './model.js';
 import {quickHabitCycles,sundayBackfillSummary} from './today-view.js';
 import {HABIT_ICON_GROUPS} from './habit-icons.js';
@@ -14,6 +14,7 @@ function readHabitView(){try{return localStorage.getItem(VIEW_KEY)==='detail'?'d
 let habitView=readHabitView();
 let state,storageError='',lastRaw=null,page='home',historyTab='cycles',rewardTab='shop',showArchived=false;
 let pendingHabitDeletion=null;
+let cycleCalendarView=null;
 const el=document.querySelector('#app'),dialog=document.querySelector('#dialog');
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>d.replaceAll('-','.');
@@ -31,7 +32,7 @@ function load({initialize=true}={}){try{lastRaw=localStorage.getItem(KEY);state=
 function commit(fn,{replace=false}={}){if(storageError&&!replace)throw new Error('本地数据暂不可用，请先到数据与设置恢复备份。');const raw=localStorage.getItem(KEY);if(!replace&&raw!==lastRaw){load();render();throw new Error('另一个页面更新了数据，已刷新，请重试。')}const next=structuredClone(state);const result=fn(next);next.revision=(state.revision||0)+1;validate(next);const serialized=JSON.stringify(next);try{localStorage.setItem(KEY,serialized)}catch{throw new Error('保存失败，设备空间不足或浏览器禁止存储。本次操作未生效。')}state=next;lastRaw=serialized;storageError='';render();return result}
 let toastTimer;function toast(msg){const t=document.querySelector('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3500)}
 function modal(title,body){pendingHabitDeletion=null;closeDatePicker();dialog.classList.remove('habit-record','habit-delete-confirmation');dialog.innerHTML=`<div class="modal-head"><h2 id="dialog-title">${esc(title)}</h2><button class="close" data-action="close" aria-label="关闭">${icon('close')}</button></div><div class="modal-body">${body}<div class="error" role="alert" id="form-error"></div></div>`;if(!dialog.open)dialog.showModal();dialog.scrollTop=0;syncDateFields(dialog)}
-function close(){pendingHabitDeletion=null;closeDatePicker();dialog.close()}
+function close(){pendingHabitDeletion=null;cycleCalendarView=null;closeDatePicker();dialog.close()}
 function empty(title,text,button=''){return `<div class="card empty"><div class="empty-icon">${icon(page==='gift'?'gift':page==='history'?'history':'leaf')}</div><h3>${title}</h3><p>${text}</p>${button}</div>`}
 const pageButton=(id,text)=>`<button class="btn" data-page="${id}">${text} ${icon('arrow')}</button>`;
 function head(title,sub,action=''){
@@ -195,9 +196,26 @@ function reviewBackfill(id){
  section?.scrollIntoView({block:'start'});
  section?.querySelector('.backfill-day:not(:disabled)')?.focus({preventScroll:true});
 }
-function detail(id){
+function detail(id,calendarWeek=null){
  const c=state.cycles.find(c=>c.id===id),logs=state.checkins.filter(x=>x.cycleId===id).sort((a,b)=>a.date.localeCompare(b.date)),until=c.status==='active'?today():c.endedAt,elapsed=expected(c,until),isActive=c.status==='active',activity=cycleToday(c),planNote=todayExplanation(c,activity);
- modal('习惯记录',`<div class="record-heading"><span class="kicker">HABIT / ${String(cycleNum(c)).padStart(2,'0')}</span><h3>${esc(c.snapshot.name)}</h3>${cycleNote(c)}<p>${schedule(c)} · ${difficulty[c.snapshot.difficulty]}<span class="record-reward">+${c.snapshot.points} pts / 次</span></p></div><section class="record-section"><div class="record-section-head"><h3>当前周期</h3><span class="meta">${cycleStatus(c)}</span></div><p>${fmt(c.startDate)} — ${fmt(c.endDate)}${c.endedAt?`<br>实际结束 ${fmt(c.endedAt)}`:''}</p><div class="detail-stats"><div>完成记录<strong>${logs.length} <small>/ ${expected(c)}</small></strong></div><div>计划完成率<strong>${rate(c)}<small>%</small></strong></div><div>本期积分<strong>${cyclePoints(state,c)}<small>pts</small></strong></div></div><div class="progress" role="progressbar" aria-label="计划完成率" aria-valuenow="${rate(c)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${rate(c)}%"></i></div><p class="record-context">截至${c.frequency.type==='weekly'?(isActive?'本周':'结束所在周'):(isActive?'今天':'结束')}计划 ${elapsed} 次，已完成 ${logs.length} 次。</p>${cycleRuleDetails(c)}</section>${isActive?`<button class="btn full record-check" data-action="${activity.done?'record-undo':'record-check'}" data-id="${c.id}" ${activity.due?'':'disabled'}>${activity.done?icon('check'):icon('plus')}${activity.done?'今日已完成 · 撤销打卡':activity.due?`${activity.status} · 打卡 +${c.snapshot.points} pts`:activity.status}</button>${planNote?`<p class="habit-plan-note ${activity.kind==='behind'?'is-behind':''}">${planNote}</p>`:''}${backfillCalendar(c)}`:''}${renderCycleCalendar(state,c)}${logs.length?`<section class="record-section"><details><summary>全部 ${logs.length} 次记录</summary><div class="record-logs">${[...logs].reverse().map(x=>`<div class="row sub"><span>${fmt(x.date)}</span><span>+${x.points} pts</span></div>`).join('')}</div></details></section>`:''}${finishControls(c)}`);dialog.classList.add('habit-record');
+ modal('习惯记录',`<div class="record-heading"><span class="kicker">HABIT / ${String(cycleNum(c)).padStart(2,'0')}</span><h3>${esc(c.snapshot.name)}</h3>${cycleNote(c)}<p>${schedule(c)} · ${difficulty[c.snapshot.difficulty]}<span class="record-reward">+${c.snapshot.points} pts / 次</span></p></div><section class="record-section"><div class="record-section-head"><h3>当前周期</h3><span class="meta">${cycleStatus(c)}</span></div><p>${fmt(c.startDate)} — ${fmt(c.endDate)}${c.endedAt?`<br>实际结束 ${fmt(c.endedAt)}`:''}</p><div class="detail-stats"><div>完成记录<strong>${logs.length} <small>/ ${expected(c)}</small></strong></div><div>计划完成率<strong>${rate(c)}<small>%</small></strong></div><div>本期积分<strong>${cyclePoints(state,c)}<small>pts</small></strong></div></div><div class="progress" role="progressbar" aria-label="计划完成率" aria-valuenow="${rate(c)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${rate(c)}%"></i></div><p class="record-context">截至${c.frequency.type==='weekly'?(isActive?'本周':'结束所在周'):(isActive?'今天':'结束')}计划 ${elapsed} 次，已完成 ${logs.length} 次。</p>${cycleRuleDetails(c)}</section>${isActive?`<button class="btn full record-check" data-action="${activity.done?'record-undo':'record-check'}" data-id="${c.id}" ${activity.due?'':'disabled'}>${activity.done?icon('check'):icon('plus')}${activity.done?'今日已完成 · 撤销打卡':activity.due?`${activity.status} · 打卡 +${c.snapshot.points} pts`:activity.status}</button>${planNote?`<p class="habit-plan-note ${activity.kind==='behind'?'is-behind':''}">${planNote}</p>`:''}${backfillCalendar(c)}`:''}${renderCycleCalendar(state,c,today(),calendarWeek)}${logs.length?`<section class="record-section"><details><summary>全部 ${logs.length} 次记录</summary><div class="record-logs">${[...logs].reverse().map(x=>`<div class="row sub"><span>${fmt(x.date)}</span><span>+${x.points} pts</span></div>`).join('')}</div></details></section>`:''}${finishControls(c)}`);dialog.classList.add('habit-record');
+ cycleCalendarView={cycleId:id,endWeek:cycleCalendarNavigation(c,today(),calendarWeek).endWeek};
+}
+
+
+function moveCycleCalendar(id,direction){
+ if(!dialog.open||!dialog.classList.contains('habit-record')||cycleCalendarView?.cycleId!==id)return;
+ const cycle=state.cycles.find(c=>c.id===id);
+ if(!cycle)throw new Error('这一期不存在，请重新打开详情。');
+ const navigation=cycleCalendarNavigation(cycle,today(),cycleCalendarView.endWeek);
+ const target=direction<0?navigation.previousWeek:direction>0?navigation.nextWeek:navigation.currentWeek;
+ if(!target||target===navigation.endWeek)return;
+ const scrollTop=dialog.scrollTop;
+ detail(id,target);
+ const action=direction<0?'previous':direction>0?'next':'current';
+ const button=dialog.querySelector(`[data-action="cycle-calendar-${action}"]`);
+ (button&&!button.disabled?button:dialog.querySelector('.cycle-calendar-range')).focus({preventScroll:true});
+ dialog.scrollTop=scrollTop;
 }
 
 function rewardForm(id){const r=id?state.rewards.find(x=>x.id===id):{name:'',cost:300};if(!r)throw new Error('奖励不存在。');if(id&&rewardRedeemed(state,id))throw new Error('已兑换的奖励不能修改，请新建一个奖励。');modal(id?'编辑奖励':'新建奖励',`<form id="reward-form" data-id="${id||''}"><label for="name">奖励名称</label><input id="name" name="name" required maxlength="60" placeholder="一件值得期待的事" value="${esc(r.name)}"><label for="cost">兑换所需积分</label><input type="number" id="cost" name="cost" min="1" max="1000000" required value="${r.cost}"><p class="form-note">每个奖励只能兑换一次，扣除积分后移入兑换记录。以后想再兑换，可以新建同名奖励。</p><div class="modal-actions">${id?`<button type="button" class="btn danger" data-action="delete-reward" data-id="${id}">删除奖励</button>`:''}<button class="btn" type="submit">${id?'保存奖励':'创建奖励'}</button></div></form>`)}
@@ -239,7 +257,10 @@ const goalUI=createGoalUI({getState:()=>state,commit,modal,close,toast,esc,icon,
 const actions={
  'clear-data':clearDataConfirmation,'confirm-clear-data':clearLocalData,
  'review-backfill':reviewBackfill,
- 'record-check':id=>{const points=commit(s=>checkIn(s,id));detail(id);toast(`今日已完成，+${points} pts`)},
+ 'cycle-calendar-previous':id=>moveCycleCalendar(id,-1),
+ 'cycle-calendar-next':id=>moveCycleCalendar(id,1),
+ 'cycle-calendar-current':id=>moveCycleCalendar(id,0),
+ 'record-check':id=>{const points=commit(s=>checkIn(s,id));detail(id,cycleCalendarView?.cycleId===id?cycleCalendarView.endWeek:null);toast(`今日已完成，+${points} pts`)},
  'record-undo':id=>actions.undo(id),
  'habit-view':view=>{if(!['detail','quick'].includes(view))return;habitView=view;try{localStorage.setItem(VIEW_KEY,view)}catch{}render();document.querySelector('.habit-view-switch [aria-pressed="true"]')?.focus({preventScroll:true})},
  'icon-category':id=>{dialog.querySelectorAll('[data-icon-group]').forEach(group=>group.hidden=group.dataset.iconGroup!==id);dialog.querySelectorAll('[data-action="icon-category"]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.id===id)))},
@@ -249,7 +270,7 @@ const actions={
  'history-cycles':()=>{historyTab='cycles';render()},'history-completed':()=>{historyTab='completed';render()},
  check:id=>{const c=state.cycles.find(c=>c.id===id),points=commit(s=>checkIn(s,id));toast(`完成今天的一步，+${points} pts${points>c.snapshot.points?'（含周达标奖励）':''}`)},
  backfill:key=>{const [id,date]=key.split('/'),c=state.cycles.find(c=>c.id===id);if(!canBackfill(state,c,date))throw new Error('该日期当前不可补卡，请重新打开详情。');const reward=checkInReward(state,c,date);confirm('补上这一天？',`${esc(c.snapshot.name)} · ${fmt(date)}，确认后获得 ${reward.total} pts${reward.bonus?`（含周奖励 ${reward.bonus}）`:''}。补卡后无法撤销，请确认这一天确实完成了习惯。`,'confirm-backfill',key,'确认补卡')},
- 'confirm-backfill':key=>{const [id,date]=key.split('/'),points=commit(s=>backfillCheckIn(s,id,date));detail(id);toast(`${fmt(date)} 已补卡，+${points} pts`)},
+ 'confirm-backfill':key=>{const [id,date]=key.split('/'),points=commit(s=>backfillCheckIn(s,id,date));detail(id,cycleCalendarView?.cycleId===id?cycleCalendarView.endWeek:null);toast(`${fmt(date)} 已补卡，+${points} pts`)},
  undo:id=>{const c=state.cycles.find(c=>c.id===id),cost=undoCheckInCost(state,c);confirm('撤销今天的打卡？',`将扣回 ${cost} pts${cost>c.snapshot.points?'，包含因不再达标而撤回的周奖励':''}。`,'confirm-undo',id,'撤销打卡')},
  'confirm-undo':id=>{commit(s=>undoCheckIn(s,id));close();toast('已撤销今日打卡')},
  'archive-template':id=>{commit(s=>{s.templates.find(t=>t.id===id).archived=true});close();toast('模板已停用，周期和历史仍然保留')},
