@@ -94,6 +94,34 @@ export function finishCycle(s,id,status){
  if(status==='ended'&&!s.checkins.some(x=>x.cycleId===id)){s.cycles=s.cycles.filter(x=>x.id!==id);return 'deleted'}
  c.status=status==='completed'?cycleOutcome(s,c):'ended';c.endedAt=today();return c.status;
 }
+function habitDeletionCycles(s,kind,id){
+ if(kind==='template'){
+  ensure(s.templates.some(t=>t.id===id),'习惯模板不存在。');
+  return s.cycles.filter(c=>c.templateId===id);
+ }
+ ensure(kind==='cycle','删除类型无效。');
+ const cycle=s.cycles.find(c=>c.id===id);
+ ensure(cycle,'这一期不存在。');
+ ensure(cycle.status==='active','只能删除进行中的一期。');
+ return [cycle];
+}
+export function habitDeletionImpact(s,kind,id){
+ const ids=new Set(habitDeletionCycles(s,kind,id).map(c=>c.id));
+ const checkins=s.checkins.filter(event=>ids.has(event.cycleId));
+ const points=checkins.reduce((sum,event)=>sum+event.points,0)+weeklyAwards(s).filter(award=>ids.has(award.cycleId)).reduce((sum,award)=>sum+award.points,0);
+ return {cycleCount:ids.size,checkinCount:checkins.length,points,balanceAfter:balance(s)-points};
+}
+function deleteHabitData(s,kind,id){
+ const impact=habitDeletionImpact(s,kind,id);
+ ensure(impact.balanceAfter>=0,`删除需扣回 ${impact.points} 积分，当前余额不足，记录未删除。`);
+ const ids=new Set(habitDeletionCycles(s,kind,id).map(c=>c.id));
+ s.checkins=s.checkins.filter(event=>!ids.has(event.cycleId));
+ s.cycles=s.cycles.filter(c=>!ids.has(c.id));
+ if(kind==='template')s.templates=s.templates.filter(t=>t.id!==id);
+ return impact;
+}
+export function deleteCycle(s,id){return deleteHabitData(s,'cycle',id)}
+export function deleteTemplate(s,id){return deleteHabitData(s,'template',id)}
 export function rewardRedeemed(s,id){return s.redemptions.some(record=>record.rewardId===id)}
 export function rewardAvailable(s,reward){return !!reward&&!reward.archived&&!rewardRedeemed(s,reward.id)}
 export function saveReward(s,fields,id=null){
