@@ -1,6 +1,7 @@
 import {LOCAL_DATA_KEY,HABIT_VIEW_KEY,clearStoredData} from './local-data.js';
 import {dateField,initDatePickers,syncDateFields,closeDatePicker,validateDateFields} from './date-picker.js';
 import {createGoalUI} from './goal-ui.js';
+import {deleteCycle,deleteTemplate,habitDeletionImpact} from './model.js';
 import {quickHabitCycles,sundayBackfillSummary} from './today-view.js';
 import {HABIT_ICON_GROUPS} from './habit-icons.js';
 import {renderIcon} from './icons.js';
@@ -11,6 +12,7 @@ const VIEW_KEY=HABIT_VIEW_KEY;
 function readHabitView(){try{return localStorage.getItem(VIEW_KEY)==='detail'?'detail':'quick'}catch{return 'quick'}}
 let habitView=readHabitView();
 let state,storageError='',lastRaw=null,page='home',historyTab='cycles',rewardTab='shop',showArchived=false;
+let pendingHabitDeletion=null;
 const el=document.querySelector('#app'),dialog=document.querySelector('#dialog');
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>d.replaceAll('-','.');
@@ -27,8 +29,8 @@ const habitIcon=t=>`<div class="habit-icon ${tone(t)}">${icon(t.icon)}</div>`;
 function load({initialize=true}={}){try{lastRaw=localStorage.getItem(KEY);state=lastRaw?upgrade(JSON.parse(lastRaw)):initialState();if(!lastRaw&&initialize){localStorage.setItem(KEY,JSON.stringify(state));lastRaw=localStorage.getItem(KEY)}storageError=''}catch(e){state=initialState();storageError='本地数据无法读取或浏览器禁止存储。已有数据不会被覆盖；请先导出原始数据，或导入有效备份。'}}
 function commit(fn,{replace=false}={}){if(storageError&&!replace)throw new Error('本地数据暂不可用，请先到数据与设置恢复备份。');const raw=localStorage.getItem(KEY);if(!replace&&raw!==lastRaw){load();render();throw new Error('另一个页面更新了数据，已刷新，请重试。')}const next=structuredClone(state);const result=fn(next);next.revision=(state.revision||0)+1;validate(next);const serialized=JSON.stringify(next);try{localStorage.setItem(KEY,serialized)}catch{throw new Error('保存失败，设备空间不足或浏览器禁止存储。本次操作未生效。')}state=next;lastRaw=serialized;storageError='';render();return result}
 let toastTimer;function toast(msg){const t=document.querySelector('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3500)}
-function modal(title,body){closeDatePicker();dialog.classList.remove('habit-record');dialog.innerHTML=`<div class="modal-head"><h2 id="dialog-title">${esc(title)}</h2><button class="close" data-action="close" aria-label="关闭">${icon('close')}</button></div><div class="modal-body">${body}<div class="error" role="alert" id="form-error"></div></div>`;if(!dialog.open)dialog.showModal();dialog.scrollTop=0;syncDateFields(dialog)}
-function close(){closeDatePicker();dialog.close()}
+function modal(title,body){pendingHabitDeletion=null;closeDatePicker();dialog.classList.remove('habit-record','habit-delete-confirmation');dialog.innerHTML=`<div class="modal-head"><h2 id="dialog-title">${esc(title)}</h2><button class="close" data-action="close" aria-label="关闭">${icon('close')}</button></div><div class="modal-body">${body}<div class="error" role="alert" id="form-error"></div></div>`;if(!dialog.open)dialog.showModal();dialog.scrollTop=0;syncDateFields(dialog)}
+function close(){pendingHabitDeletion=null;closeDatePicker();dialog.close()}
 function empty(title,text,button=''){return `<div class="card empty"><div class="empty-icon">${icon(page==='gift'?'gift':page==='history'?'history':'leaf')}</div><h3>${title}</h3><p>${text}</p>${button}</div>`}
 const pageButton=(id,text)=>`<button class="btn" data-page="${id}">${text} ${icon('arrow')}</button>`;
 function head(title,sub,action=''){
@@ -136,7 +138,7 @@ function templateForm(id){
  ${choiceField('difficulty','难度',Object.entries(difficulty),t.difficulty,'segmented')}
  <label for="points">默认单次积分</label><input id="points" name="points" type="number" min="1" max="1000" required value="${t.points}">
  <p class="form-note">轻松默认 5，适中 10，挑战 20；也可以自行调整。开始一期时，可单独设置执行频率、本期积分和达标比例。</p>
- <div class="modal-actions">${id?`<button class="btn secondary" type="button" data-action="${t.archived?'restore-template':'archive-template'}" data-id="${id}">${t.archived?'恢复模板':'停用模板'}</button>`:''}<button class="btn" type="submit">保存模板</button></div></form>`)
+ <div class="modal-actions">${id?`<button class="btn secondary" type="button" data-action="${t.archived?'restore-template':'archive-template'}" data-id="${id}">${t.archived?'恢复模板':'停用模板'}</button>`:''}<button class="btn" type="submit">保存模板</button></div>${id?`<div class="habit-delete-action"><button class="btn danger" type="button" data-action="delete-template" data-id="${id}">删除模板</button></div>`:''}</form>`)
 }
 function frequencyFields(){return `${choiceField('frequency','本期执行频率',[['daily','每天'],['weekdays','指定星期'],['weekly','每周次数']],'daily','segmented')}
  <div id="weekday-fields" hidden><fieldset class="choice-field"><legend>选择执行日</legend><div class="days">${[1,2,3,4,5,6,0].map(d=>`<label><input type="checkbox" name="day" value="${d}" ${[1,3,5].includes(d)?'checked':''}><span>${['日','一','二','三','四','五','六'][d]}</span></label>`).join('')}</div></fieldset></div>
@@ -174,7 +176,7 @@ function cycleRuleDetails(c){
 function finishControls(c){
  if(c.status!=='active')return `<div class="modal-actions"><button class="btn" data-action="start-again" data-id="${c.templateId}">再开始新的一期</button></div>`;
  const due=today()>=c.endDate;
- return `<div class="modal-actions">${!due?`<button class="btn secondary" data-action="finish-ended" data-id="${c.id}" ${today()<c.startDate?'disabled':''}>提前结束</button>`:''}<button class="btn" data-action="finish-completed" data-id="${c.id}" ${due?'':'disabled'}>结束并归档</button></div><div class="form-note">${due?'本周内的漏卡仍可补上。归档后不能再打卡或补卡。':'到达计划结束日期后，可以结束并归档。'}</div>`;
+ return `<div class="modal-actions">${!due?`<button class="btn secondary" data-action="finish-ended" data-id="${c.id}" ${today()<c.startDate?'disabled':''}>提前结束</button>`:''}<button class="btn" data-action="finish-completed" data-id="${c.id}" ${due?'':'disabled'}>结束并归档</button></div><div class="form-note">${due?'本周内的漏卡仍可补上。归档后不能再打卡或补卡。':'到达计划结束日期后，可以结束并归档。'}</div><div class="habit-delete-action"><button class="btn danger" data-action="delete-cycle" data-id="${c.id}">删除本期</button></div>`;
 }
 
 function backfillCalendar(c){
@@ -199,6 +201,25 @@ function detail(id){
 
 function rewardForm(id){const r=id?state.rewards.find(x=>x.id===id):{name:'',cost:300};if(!r)throw new Error('奖励不存在。');if(id&&rewardRedeemed(state,id))throw new Error('已兑换的奖励不能修改，请新建一个奖励。');modal(id?'编辑奖励':'新建奖励',`<form id="reward-form" data-id="${id||''}"><label for="name">奖励名称</label><input id="name" name="name" required maxlength="60" placeholder="一件值得期待的事" value="${esc(r.name)}"><label for="cost">兑换所需积分</label><input type="number" id="cost" name="cost" min="1" max="1000000" required value="${r.cost}"><p class="form-note">每个奖励只能兑换一次，扣除积分后移入兑换记录。以后想再兑换，可以新建同名奖励。</p><div class="modal-actions">${id?`<button type="button" class="btn danger" data-action="delete-reward" data-id="${id}">删除奖励</button>`:''}<button class="btn" type="submit">${id?'保存奖励':'创建奖励'}</button></div></form>`)}
 function confirm(title,body,action,id,label='确认'){modal(title,`<p>${body}</p><div class="modal-actions"><button class="btn secondary" data-action="close">取消</button><button class="btn" data-action="${action}" data-id="${id}">${label}</button></div>`)}
+function confirmHabitDeletion(kind,id){
+ const impact=habitDeletionImpact(state,kind,id),isTemplate=kind==='template';
+ const record=isTemplate?state.templates.find(t=>t.id===id):state.cycles.find(c=>c.id===id);
+ const name=isTemplate?record.name:record.snapshot.name;
+ const scope=isTemplate?`将永久删除「${esc(name)}」模板，以及它的全部 ${impact.cycleCount} 期记录（含进行中与已归档）。`:`将永久删除「${esc(name)}」第 ${cycleNum(record)} 期（${fmt(record.startDate)} — ${fmt(record.endDate)}）。习惯模板和其他期数会保留。`;
+ modal(isTemplate?'删除这个习惯模板？':'删除正在进行的这一期？',`<p>${scope}</p><p>同时删除 ${impact.checkinCount} 次打卡，扣回 ${impact.points} pts（含已获得的周奖励）。删除后无法撤销。</p><p>${impact.balanceAfter<0?`当前余额 ${balance(state)} pts，不足以扣回积分，暂时无法删除。`:`删除后可用积分 ${impact.balanceAfter} pts。`}</p><div class="modal-actions"><button class="btn secondary" data-action="close">取消</button><button class="btn danger" data-action="confirm-delete-habit" data-id="${id}" ${impact.balanceAfter<0?'disabled':''}>${isTemplate?'删除模板及全部记录':'确认删除本期'}</button></div>`);
+ pendingHabitDeletion={kind,id,raw:lastRaw};
+ dialog.classList.add('habit-delete-confirmation');
+ dialog.querySelector('.modal-actions [data-action="close"]').focus();
+}
+function deleteConfirmedHabit(id){
+ const pending=pendingHabitDeletion;
+ if(!pending||pending.id!==id)throw new Error('请重新打开删除确认。');
+ if(lastRaw!==pending.raw||localStorage.getItem(KEY)!==pending.raw){
+  load();render();close();toast('记录已更新，请重新打开删除确认。');return;
+ }
+ const impact=commit(s=>pending.kind==='template'?deleteTemplate(s,id):deleteCycle(s,id));
+ close();toast(`${pending.kind==='template'?'模板及其全部记录':'本期记录'}已删除，扣回 ${impact.points} pts`);
+}
 function clearDataConfirmation(){
  modal('清除本地数据？',`<p>将删除当前浏览器中的全部习惯模板、周期、目标、打卡、积分和奖励记录，并重置显示偏好。</p><p>清除后无法撤销。已导出的备份文件仍可用于恢复。</p><button class="text-btn" data-action="export">先导出备份 ${icon('arrow')}</button><div class="modal-actions"><button class="btn secondary" data-action="close">取消</button><button class="btn danger" data-action="confirm-clear-data">确认清除</button></div>`);
 }
@@ -232,6 +253,9 @@ const actions={
  'confirm-undo':id=>{commit(s=>undoCheckIn(s,id));close();toast('已撤销今日打卡')},
  'archive-template':id=>{commit(s=>{s.templates.find(t=>t.id===id).archived=true});close();toast('模板已停用，周期和历史仍然保留')},
  'restore-template':id=>{commit(s=>{s.templates.find(t=>t.id===id).archived=false});close();toast('模板已恢复')},
+ 'delete-template':id=>confirmHabitDeletion('template',id),
+ 'delete-cycle':id=>confirmHabitDeletion('cycle',id),
+ 'confirm-delete-habit':deleteConfirmedHabit,
  'delete-reward':id=>{const r=state.rewards.find(r=>r.id===id);if(!r)throw new Error('奖励不存在。');if(rewardRedeemed(state,id))throw new Error('已兑换的奖励需保留记录，不能删除。');confirm('删除这个奖励？',`「${esc(r.name)}」将被永久删除，无法恢复。不会扣除积分。`,'confirm-delete-reward',id,'确认删除')},
  'confirm-delete-reward':id=>{commit(s=>deleteReward(s,id));close();toast('奖励已删除')},
  'restore-reward':id=>{commit(s=>archiveReward(s,id,false));close();toast('奖励已恢复到待兑换')},
