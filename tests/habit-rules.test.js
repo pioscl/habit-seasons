@@ -24,14 +24,25 @@ test('invalid cycle rules never create a cycle',t=>{
  const {s}=setup(t);const id=s.templates[1].id;
  for(const rules of [null,{points:0},{points:1.5},{points:1001},{weeklyBonusPoints:-1},{weeklyBonusPoints:1.5},{weeklyBonusPoints:1000001},{completionThreshold:null},{completionThreshold:0},{completionThreshold:101},{completionThreshold:90.5}])unchanged(s,()=>startCycle(s,id,day,day,{type:'daily'},rules));
 });
-test('the last weekly check-in awards once and Monday starts a separate award',t=>{
+test('extra check-ins award base points and undo preserves the earned weekly bonus',t=>{
  const {s,c}=setup(t);
  assert.equal(hit(t,s,c,day),10);assert.equal(hit(t,s,c,'2026-09-22'),10);assert.equal(balance(s),20);
  assert.equal(hit(t,s,c,'2026-09-23'),20);assert.equal(balance(s),40);assert.equal(weeklyAwards(s).length,1);
- unchanged(s,()=>checkIn(s,c.id));at(t,'2026-09-24');unchanged(s,()=>checkIn(s,c.id));
- assert.deepEqual(upgrade(JSON.parse(JSON.stringify(s))),s);assert.equal(balance(upgrade(s)),40);
+ unchanged(s,()=>checkIn(s,c.id));assert.equal(hit(t,s,c,'2026-09-24'),10);
+ assert.equal(balance(s),50);assert.equal(weeklyAwards(s).length,1);
+ assert.equal(undoCheckIn(s,c.id),10);assert.equal(weeklyAwards(s).length,1);assert.equal(balance(s),40);
+ assert.equal(checkIn(s,c.id),10);
+ assert.deepEqual(upgrade(JSON.parse(JSON.stringify(s))),s);assert.equal(balance(upgrade(s)),50);
  for(const date of ['2026-09-28','2026-09-29','2026-09-30'])hit(t,s,c,date);
- assert.equal(balance(s),80);assert.equal(weeklyAwards(s).length,2);assert.equal(cyclePoints(s,c),80);validate(s);
+ assert.equal(balance(s),90);assert.equal(weeklyAwards(s).length,2);assert.equal(cyclePoints(s,c),90);validate(s);
+});
+test('extra check-ins keep their points without making up an unfinished week at settlement',t=>{
+ const {s,c}=setup(t,{rules:{points:10,weeklyBonusPoints:20,completionThreshold:100}});
+ for(const date of [day,'2026-09-22','2026-09-23','2026-09-24','2026-09-25','2026-09-28'])hit(t,s,c,date);
+ at(t,c.endDate);
+ assert.equal(s.checkins.length,6);assert.equal(expected(c),6);
+ assert.equal(finishCycle(s,c.id,'completed'),'failed');
+ assert.equal(balance(s),80);assert.deepEqual(upgrade(JSON.parse(JSON.stringify(s))),s);
 });
 test('backfill triggers bonus and undo of today revokes the bonus even if backfill triggered it',t=>{
  const {s,c}=setup(t);hit(t,s,c,'2026-09-27');backfillCheckIn(s,c.id,day);

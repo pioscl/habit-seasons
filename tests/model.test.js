@@ -29,10 +29,11 @@ test('weekly targets use Monday boundaries and cap partial weeks by available da
  assert.equal(weeklyTarget(c,'2026-09-25'),3);assert.equal(weeklyTarget(c,'2026-09-28'),4);assert.equal(weeklyTarget(c,'2026-10-05'),2);
  assert.equal(expected(c),9);assert.equal(expected(c,'2026-09-26'),3);assert.equal(expected(c,'2026-09-24'),0);
 });
-test('weekly quota blocks extra dates and resets next Monday',()=>{
+test('weekly targets allow unlogged dates after completion and start fresh on Monday',()=>{
  const c={id:'c',status:'active',startDate:'2026-09-21',endDate:'2026-10-04',frequency:{type:'weekly',times:2}};
  const s={checkins:[{cycleId:'c',date:'2026-09-21'},{cycleId:'c',date:'2026-09-23'}]};
- assert.equal(canCheckIn(s,c,'2026-09-24'),false);assert.equal(canCheckIn(s,c,'2026-09-28'),true);
+ assert.equal(canCheckIn(s,c,'2026-09-23'),false);
+ assert.equal(canCheckIn(s,c,'2026-09-24'),true);assert.equal(canCheckIn(s,c,'2026-09-28'),true);
  assert.deepEqual(weekProgress(s,c,'2026-09-24'),{done:2,target:2});assert.deepEqual(weekProgress(s,c,'2026-09-28'),{done:0,target:2});
 });
 test('weekly check-in and undo update quota and points together',()=>{
@@ -117,15 +118,19 @@ test('backfill respects cycle dates and weekday schedules',t=>{
  backfillCheckIn(s,c.id,'2026-09-23');backfillCheckIn(s,c.id,'2026-09-25');
  assert.equal(s.checkins.length,2);validate(s);
 });
-test('backfill and today share the same weekly quota',t=>{
+test('backfill after the weekly goal allows another date and credits its base points',t=>{
  const {s,c}=backfillSetup(t,{type:'weekly',times:2});checkIn(s,c.id);
  backfillCheckIn(s,c.id,'2026-09-21');assert.equal(weekProgress(s,c).done,2);
- assert.equal(canBackfill(s,c,'2026-09-22'),false);assert.throws(()=>backfillCheckIn(s,c.id,'2026-09-22'));
- assert.equal(balance(s),20);validate(s);
+ assert.equal(canBackfill(s,c,'2026-09-22'),true);assert.equal(backfillCheckIn(s,c.id,'2026-09-22'),10);
+ assert.equal(canBackfill(s,c,'2026-09-22'),false);assert.throws(()=>backfillCheckIn(s,c.id,'2026-09-22'),/已经完成/);
+ assert.deepEqual(weekProgress(s,c),{done:3,target:2});
+ assert.equal(balance(s),30);validate(s);
 });
-test('backfill reaching weekly quota prevents an extra check-in today',t=>{
+test('backfill reaching the weekly goal still allows a check-in today',t=>{
  const {s,c}=backfillSetup(t,{type:'weekly',times:1});backfillCheckIn(s,c.id,'2026-09-21');
- assert.equal(canCheckIn(s,c),false);assert.throws(()=>checkIn(s,c.id));assert.equal(s.checkins.length,1);validate(s);
+ assert.equal(canCheckIn(s,c),true);assert.equal(checkIn(s,c.id),10);
+ assert.equal(canCheckIn(s,c),false);assert.throws(()=>checkIn(s,c.id),/已经完成/);
+ assert.equal(s.checkins.length,2);validate(s);
 });
 test('archived cycles reject backfill',t=>{
  const {s,c}=backfillSetup(t,{type:'daily'},'2026-09-21','2026-09-27');

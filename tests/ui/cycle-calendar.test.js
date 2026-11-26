@@ -91,4 +91,51 @@ test('cycle details show four aligned weeks, earned history highlighting and the
  button('previous').click();assert.equal(range(),'2026.10.26 — 2026.11.22');
  button('current').click();assert.equal(range(),'2026.11.02 — 2026.11.29');
  assert.equal(localStorage.getItem(LOCAL_DATA_KEY),raw);
+
+ await t.test('a completed weekly habit stays actionable in quick view and in details',()=>{
+  t.mock.timers.setTime(+parseDate('2026-11-23'));
+  const extraState=populatedState();
+  const habit=startCycle(extraState,extraState.templates[0].id,'2026-11-23','2026-12-06',{type:'weekly',times:3},{weeklyBonusPoints:20});
+  for(const date of ['2026-11-23','2026-11-24','2026-11-25']){
+   t.mock.timers.setTime(+parseDate(date));checkIn(extraState,habit.id);
+  }
+  t.mock.timers.setTime(+parseDate('2026-11-27'));
+  const saved=JSON.stringify(extraState);
+  localStorage.setItem(LOCAL_DATA_KEY,saved);
+  window.dispatchEvent(new window.StorageEvent('storage',{key:LOCAL_DATA_KEY,newValue:saved}));
+  document.querySelector('[data-page="home"]').click();
+  document.querySelector('[data-action="habit-view"][data-id="quick"]').click();
+
+  const group=()=>document.querySelector('.quick-completed-group');
+  const wallet=()=>document.querySelector('.wallet-pill b').textContent;
+  const openDetails=()=>group().querySelector('[data-action="detail"]').click();
+  assert.equal(group().open,false);
+  assert.match(document.querySelector('.habit-section-title').textContent,/今日暂无必打项/);
+  group().querySelector('summary').click();
+  assert.equal(group().open,true);
+  group().querySelector('[data-action="check"]').click();
+  assert.equal(group().open,true);assert.equal(wallet(),'60');
+  assert.match(group().textContent,/额外 1 次/);
+
+  openDetails();
+  assert.equal(document.querySelector('[aria-label="计划完成率"]').getAttribute('aria-valuenow'),'50');
+  assert.match(document.querySelector('.record-context').textContent,/实际打卡 4 次（含额外 1 次）/);
+  assert.equal(document.querySelector('.cycle-calendar-day[title="2026-11-27 · 已打卡"]').classList.contains('hit'),true);
+  document.querySelector('[data-action="record-undo"]').click();
+  document.querySelector('[data-action="confirm-undo"]').click();
+  assert.equal(wallet(),'50');
+
+  openDetails();
+  const recordButton=document.querySelector('[data-action="record-check"]');
+  assert.match(recordButton.textContent,/继续打卡/);
+  recordButton.click();
+  const backfill=document.querySelector(`[data-action="backfill"][data-id="${habit.id}/2026-11-26"]`);
+  assert.match(backfill.getAttribute('aria-label'),/可补记额外打卡/);
+  backfill.click();document.querySelector('[data-action="confirm-backfill"]').click();
+  assert.equal(wallet(),'70');
+  assert.match(document.querySelector('.cycle-calendar-week.is-current .cycle-calendar-week-label').textContent,/3 \/ 3 · 额外 2 次/);
+  assert.equal(document.querySelector('[aria-label="计划完成率"]').getAttribute('aria-valuenow'),'50');
+  const after=validate(JSON.parse(localStorage.getItem(LOCAL_DATA_KEY)));
+  assert.equal(after.checkins.length,5);
+ });
 });

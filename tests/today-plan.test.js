@@ -31,7 +31,8 @@ test('optional check-ins never enter the required denominator, including the fin
  const plan=todayPlan(s,c,date);
  assert.equal(plan.done,true);assert.equal(plan.kind,'optional');assert.equal(plan.actionable,true);
  assert.deepEqual(dayPlanSummary(s,s.cycles,date),{required:0,completedRequired:0,optional:0,behind:0,completed:1});
- const next=todayPlan(s,c,'2026-09-22');assert.equal(next.kind,'met');assert.equal(next.actionable,false);
+ const next=todayPlan(s,c,'2026-09-22');assert.equal(next.kind,'met');assert.equal(next.actionable,true);
+ assert.deepEqual(dayPlanSummary(s,s.cycles,'2026-09-22'),{required:0,completedRequired:0,optional:0,behind:0,completed:0});
 });
 
 test('a late weekly plan reports the shortfall and still allows today to be recorded',()=>{
@@ -103,5 +104,5 @@ test('real backfill, check-in, undo and weekly awards stay consistent with the p
  backfillCheckIn(s,c.id,'2026-09-22');assert.equal(todayPlan(s,c).kind,'optional');
  assert.equal(checkIn(s,c.id),30);assert.equal(todayPlan(s,c).done,true);assert.equal(weeklyAwards(s).length,1);assert.equal(balance(s),50);
  undoCheckIn(s,c.id);assert.equal(todayPlan(s,c).kind,'optional');assert.equal(todayPlan(s,c).done,false);assert.equal(weeklyAwards(s).length,0);assert.equal(balance(s),20);
- backfillCheckIn(s,c.id,'2026-09-23');assert.equal(todayPlan(s,c).kind,'met');assert.equal(todayPlan(s,c).actionable,false);assert.equal(weeklyAwards(s).length,1);
+ backfillCheckIn(s,c.id,'2026-09-23');assert.equal(todayPlan(s,c).kind,'met');assert.equal(todayPlan(s,c).actionable,true);assert.equal(weeklyAwards(s).length,1);
 });
