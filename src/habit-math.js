@@ -20,7 +20,7 @@ export function weekProgress(s,c,date=today()){
  return {done:s.checkins.filter(x=>x.cycleId===c.id&&x.date>=start&&x.date<=end).length,target:weeklyTarget(c,date)};
 }
 export function canCheckIn(s,c,date=today()){
- return c.status==='active'&&scheduled(c,date)&&(c.frequency.type!=='weekly'||weekProgress(s,c,date).done<weeklyTarget(c,date));
+ return c.status==='active'&&scheduled(c,date)&&!s.checkins.some(event=>event.cycleId===c.id&&event.date===date);
 }
 // Classify today's plan from records before today, so checking in today cannot
 // remove a required item from the day's progress denominator.
@@ -37,7 +37,7 @@ export function todayPlan(s,c,date=today()){
  let daysLeft=0;for(let d=date;d<=last;d=shiftDate(d,1))if(scheduled(c,d))daysLeft++;
  const neededBeforeToday=Math.max(0,week.target-before);
  const kind=c.frequency.type!=='weekly'?'required':neededBeforeToday===0?'met':neededBeforeToday<daysLeft?'optional':neededBeforeToday===daysLeft?'required':'behind';
- return {...result,kind,daysLeft,shortfall:c.frequency.type==='weekly'?Math.max(0,neededBeforeToday-daysLeft):0,actionable:done||c.frequency.type!=='weekly'||week.done<week.target};
+ return {...result,kind,daysLeft,shortfall:c.frequency.type==='weekly'?Math.max(0,neededBeforeToday-daysLeft):0,actionable:true};
 }
 export function dayPlanSummary(s,cycles=s.cycles,date=today()){
  const summary={required:0,completedRequired:0,optional:0,behind:0,completed:0};
@@ -53,7 +53,7 @@ export function dayPlanSummary(s,cycles=s.cycles,date=today()){
 }
 export function canBackfill(s,c,date){
  const now=today();
- return !!c&&dateValid(date)&&date>=weekStart(now)&&date<now&&canCheckIn(s,c,date)&&!s.checkins.some(x=>x.cycleId===c.id&&x.date===date);
+ return !!c&&dateValid(date)&&date>=weekStart(now)&&date<now&&canCheckIn(s,c,date);
 }
 export function expected(c,until=c.endDate){
  const end=until<c.endDate?until:c.endDate;if(end<c.startDate)return 0;
@@ -64,8 +64,25 @@ export function expected(c,until=c.endDate){
  return n;
 }
 
+export function cycleCheckInCounts(s,c){
+ const records=s.checkins.filter(event=>event.cycleId===c.id);
+ if(c.frequency.type!=='weekly')return {recorded:records.length,counted:records.length};
+
+ const byWeek=new Map();
+ for(const event of records){
+  const week=weekStart(event.date);
+  byWeek.set(week,(byWeek.get(week)||0)+1);
+ }
+ let counted=0;
+ for(const [week,logged] of byWeek)counted+=Math.min(logged,weeklyTarget(c,week));
+ return {recorded:records.length,counted};
+}
+
 export function requiredCheckins(c){return c.completionThreshold===null?null:Math.ceil(expected(c)*c.completionThreshold/100)}
-export function cycleOutcome(s,c){const required=requiredCheckins(c);return required===null||s.checkins.filter(x=>x.cycleId===c.id).length>=required?'completed':'failed'}
+export function cycleOutcome(s,c){
+ const required=requiredCheckins(c);
+ return required===null||cycleCheckInCounts(s,c).counted>=required?'completed':'failed';
+}
 export function checkInReward(s,c,date=today()){
  const week=weekProgress(s,c,date),bonus=week.target>0&&week.done+1===week.target?c.weeklyBonusPoints:0;
  return {base:c.snapshot.points,bonus,total:c.snapshot.points+bonus};

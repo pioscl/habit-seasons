@@ -25,6 +25,12 @@ export function cycleCalendarWeeks(state,cycle,date=today(),requestedWeek=null){
  });
 }
 
+export function formatWeekProgress({done,target}){
+ if(target===0)return '无安排';
+ const extra=Math.max(0,done-target);
+ return `${Math.min(done,target)} / ${target}${extra?` · 额外 ${extra} 次`:''}`;
+}
+
 export function renderCycleCalendar(state,cycle,date=today(),requestedWeek=null){
  const navigation=cycleCalendarNavigation(cycle,date,requestedWeek);
  const weeks=cycleCalendarWeeks(state,cycle,date,navigation.endWeek),count=weeks.reduce((sum,week)=>sum+week.done,0);
@@ -42,7 +48,7 @@ export function renderCycleCalendar(state,cycle,date=today(),requestedWeek=null)
  <div class="cycle-calendar" role="group" aria-label="四周打卡记录">
  <div class="cycle-calendar-weekdays" aria-hidden="true">${['一','二','三','四','五','六','日'].map(day=>`<span>${day}</span>`).join('')}</div>
  ${weeks.map(week=>`<div class="cycle-calendar-week ${week.completed?'is-complete':''} ${week.current?'is-current':''}" role="group" aria-label="${week.startDate} 至 ${week.endDate}${week.completed?'，已达标':''}${week.current?'，本周':''}">
- <div class="cycle-calendar-week-label"><span>${shortDate(week.startDate)} — ${shortDate(week.endDate)}</span><span>${week.current?'本周 · ':week.completed?'已达标 · ':''}${week.target?`${week.done} / ${week.target}`:'无安排'}</span></div>
+ <div class="cycle-calendar-week-label"><span>${shortDate(week.startDate)} — ${shortDate(week.endDate)}</span><span>${week.current?'本周 · ':week.completed?'已达标 · ':''}${formatWeekProgress(week)}</span></div>
  <div class="cycle-calendar-dates">${week.days.map(day=>`<span class="cycle-calendar-day ${day.done?'hit':''} ${!day.scheduled?'na':''} ${day.future?'is-future':''} ${day.today?'is-today':''}" title="${day.date} · ${dayStatus(day)}" aria-label="${day.date}，${dayStatus(day)}" ${day.today?'aria-current="date"':''}>${+day.date.slice(-2)}</span>`).join('')}</div>
  </div>`).join('')}
  </div>

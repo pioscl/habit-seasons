@@ -46,7 +46,12 @@ export function validate(s){
   else{ensure(dateValid(c.endedAt)&&c.endedAt>=c.startDate,'周期结束日期无效。');if(['completed','failed'].includes(c.status))ensure(c.endedAt>=c.endDate,'尚未到期的周期不能结算。')}
   cs.set(c.id,c);
  }
- const weeklyCounts=new Map();const checkKeys=new Set();for(const c of s.checkins){const cycle=cs.get(c.cycleId),key=`${c.cycleId}/${c.date}`;ensure(cycle&&dateValid(c.date)&&scheduled(cycle,c.date)&&c.date<=today()&&(cycle.status==='active'||c.date<=cycle.endedAt)&&c.points===cycle.snapshot.points&&!checkKeys.has(key),'打卡记录日期、积分或关联无效。');checkKeys.add(key);if(cycle.frequency.type==='weekly'){const wk=`${cycle.id}/${weekStart(c.date)}`;weeklyCounts.set(wk,(weeklyCounts.get(wk)||0)+1);ensure(weeklyCounts.get(wk)<=weeklyTarget(cycle,c.date),'打卡次数超过当周目标。')}}
+ const checkKeys=new Set(),now=today();
+ for(const event of s.checkins){
+  const cycle=cs.get(event.cycleId),key=`${event.cycleId}/${event.date}`;
+  ensure(cycle&&dateValid(event.date)&&scheduled(cycle,event.date)&&event.date<=now&&(cycle.status==='active'||event.date<=cycle.endedAt)&&event.points===cycle.snapshot.points&&!checkKeys.has(key),'打卡记录日期、积分或关联无效。');
+  checkKeys.add(key);
+ }
  for(const c of s.cycles)if(['completed','failed'].includes(c.status))ensure(c.status===cycleOutcome(s,c),'周期结果与达标比例不一致。');
  const rs=new Set();for(const r of s.rewards){ensure(nameValid(r.name)&&int(r.cost,1)&&typeof r.archived==='boolean','奖励设置无效。');rs.add(r.id)}
  for(const r of s.redemptions)ensure(rs.has(r.rewardId)&&nameValid(r.name)&&int(r.cost,1)&&typeof r.redeemedAt==='string'&&Number.isFinite(Date.parse(r.redeemedAt)),'兑换记录无效。');
@@ -69,8 +74,7 @@ export function startCycle(s,templateId,startDate,endDate,frequency={type:'daily
 function recordCheckIn(s,cycleId,date){
  const c=s.cycles.find(c=>c.id===cycleId);
  ensure(c?.status==='active'&&dateValid(date)&&scheduled(c,date),'这一天不是进行中周期的执行日。');
- ensure(!s.checkins.some(x=>x.cycleId===cycleId&&x.date===date),'这一天已经完成过了。');
- ensure(canCheckIn(s,c,date),'本周目标已完成，下周再继续。');
+ ensure(canCheckIn(s,c,date),'这一天已经完成过了。');
  const reward=checkInReward(s,c,date);
  s.checkins.push({id:uid(),cycleId,date,points:c.snapshot.points});return reward.total;
 }
